@@ -8,6 +8,7 @@
 
 import Foundation
 import SwiftUI
+import CryptoKit
 
 /// 高性能 MOD 缩略图缓存
 /// - 一级：NSCache 内存缓存（线程安全，自动清理）
@@ -34,13 +35,11 @@ final class ImageThumbnailCache {
         return dir
     }()
 
-    /// 磁盘文件名：URL 的 SHA256（避免非法字符）
+    /// 磁盘文件名：URL path 的 SHA256（跨启动一致）
     private func diskFileName(for url: URL) -> String {
-        let str = url.path
-        var hasher = Hasher()
-        hasher.combine(str)
-        let h = hasher.finalize()
-        return String(format: "%016lx%016lx", h, h)  // 32 hex
+        let data = Data(url.path.utf8)
+        let hash = SHA256.hash(data: data)
+        return hash.compactMap { String(format: "%02x", $0) }.joined()
     }
 
     private func diskURL(for url: URL) -> URL {
