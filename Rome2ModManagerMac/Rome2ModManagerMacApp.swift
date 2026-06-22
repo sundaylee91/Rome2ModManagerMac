@@ -17,6 +17,7 @@ struct Rome2ModManagerMacApp: App {
                 .environmentObject(viewModel)
                 .frame(minWidth: 700, minHeight: 450)
         }
+        .defaultSize(width: 950, height: 580)
         .windowResizability(.contentMinSize)
         .commands {
             CommandGroup(after: .newItem) {
