@@ -8,12 +8,10 @@ import SwiftUI
 final class LocalizationManager: ObservableObject {
     static let shared = LocalizationManager()
     
-    /// 语言偏好：auto / zh / en
     @AppStorage("appLanguage") var appLanguage: String = "auto" {
         didSet { objectWillChange.send() }
     }
     
-    /// 当前生效的语言
     var current: String {
         switch appLanguage {
         case "zh": return "zh"
@@ -24,7 +22,6 @@ final class LocalizationManager: ObservableObject {
     
     var isChinese: Bool { current == "zh" }
     
-    /// 语言显示名称
     var languageName: String {
         switch appLanguage {
         case "zh": return "中文"
@@ -35,37 +32,29 @@ final class LocalizationManager: ObservableObject {
     
     private init() {}
     
-    /// 检测系统语言：英文 → en，其他 → zh
     private func detectSystem() -> String {
         guard let pref = Locale.preferredLanguages.first else { return "zh" }
         return pref.hasPrefix("en") ? "en" : "zh"
     }
-    
-    // MARK: - 字符串获取
     
     func str(_ key: L10n) -> String {
         isChinese ? key.zh : key.en
     }
 }
 
-// MARK: - 本地化键枚举
-
 enum L10n {
-    // App
     case appName
     case scanMods, writeScript, settings, diagnostics, refresh
     case enableAll, disableAll, launchGame
     case file, edit, view, help, window
-    
-    // 按钮/标签
     case choose, browse, save, cancel, confirm, close, reset, rename, pencil
     case moveUp, moveDown, renameMods
-    
-    // 状态
-    case scanning, loading, noMods, noModsHint
+    case confirmRename, renameMod
+    case showInFinder
+    case scanning, loading, noMods, noModsHint, noModsLoaded, noModsMatchSearch
     case scriptFound(String), scriptNotFound
     case workshopConnected, workshopNotFound
-    case clickModHint, detailHint
+    case clickModHint, detailHint, selectModHint
     case modCount(Int)
     case scanResult(Int)
     case enabledAll(Int), disabledAll
@@ -76,20 +65,19 @@ enum L10n {
     case pathSet(String)
     case refreshOk(Int)
     case noModsToSave
-    
-    // 拖拽排序
     case orderChanged
-    
-    // MOD 详情
     case fileName, status, loadOrder, folder
     case enabled, disabled
+    case enableMod
     case loadOrderLabel(Int)
-    case previewImages, noPreviewImages, clickToEnlarge
+    case previewImages, noPreviewImages, noPreviewAvailable, clickToEnlarge
     case loadOrderInfo, loadOrderDesc
     case cannotLoad, cannotLoadImage
     case selectGamePath
-    
-    // 设置
+    case fileSizeLabel, modTypeLabel, lastModifiedLabel, unknown
+    case currentNameLabel, enterNewFileName
+    case searchModsPlaceholder
+    case enabledCountFormat
     case settingsTitle, pathSettings, pathSettingsDesc
     case workshopDir, workshopDirPrompt
     case custom, `default`
@@ -101,37 +89,23 @@ enum L10n {
     case workshopPathSet(String)
     case userScriptPathSet
     case openInFinder
-    
-    // 诊断
     case diagnosticsTitle
     case workshopPath, userScriptPath, scannedPacks
     case notSet, notFound, errorInfo
     case countUnit(Int)
-    
-    // 对话框
     case renameTitle, renamePrompt, renamePlaceholder
     case selectWorkshopPrompt, selectUserScriptPrompt
-    
-    // 帮助
     case scanHelp, writeHelp, settingsHelp, diagnosticsHelp
     case renameHelp
-    
-    // 错误
     case workshopDirNotFound(String)
     case noPackFiles
     case gameLaunched(String)
     case gamePathInvalid
     case workshopPathInvalid
-    
-    // 确认
     case confirmSaveScript, confirmSaveScriptMsg(Int, Int)
     case confirmRenameAll, confirmRenameAllMsg(Int)
     case renaming
-    
-    // 游戏路径（新增）
     case gamePath, gamePathPrompt, launchHelp, gamePathSet(String)
-    
-    // 自动保存
     case autoSavedAndLaunch(Int)
     
     var zh: String {
@@ -162,16 +136,22 @@ enum L10n {
         case .moveUp: return "上移"
         case .moveDown: return "下移"
         case .renameMods: return "规范化名称"
+        case .confirmRename: return "确认重命名"
+        case .renameMod: return "重命名 MOD"
+        case .showInFinder: return "在 Finder 中显示"
         case .scanning: return "正在扫描..."
         case .loading: return "加载中..."
         case .noMods: return "暂无 MOD"
         case .noModsHint: return "点击「扫描」或按 ⌘R 加载 MOD 列表"
+        case .noModsLoaded: return "暂无 MOD\n点击工具栏「扫描」加载"
+        case .noModsMatchSearch: return "没有匹配的 MOD"
         case .scriptFound(let p): return "脚本: \(p)"
         case .scriptNotFound: return "未找到 user.script.txt"
         case .workshopConnected: return "Workshop 已连接"
         case .workshopNotFound: return "Workshop 未找到"
         case .clickModHint: return "点击左侧 MOD 查看详情"
         case .detailHint: return "详情包括 MOD 信息和预览图片"
+        case .selectModHint: return "从左侧列表选择一个 MOD 查看详情"
         case .modCount(let n): return "\(n) 个 MOD"
         case .scanResult(let n): return "已扫描到 \(n) 个 MOD"
         case .enabledAll(let n): return "已全部启用（\(n) 个）"
@@ -193,18 +173,28 @@ enum L10n {
         case .folder: return "所在文件夹"
         case .enabled: return "✓ 启用"
         case .disabled: return "✗ 关闭"
+        case .enableMod: return "启用此 MOD"
         case .loadOrderLabel(let n): return "第 \(n) 位"
         case .previewImages: return "预览图片"
         case .noPreviewImages: return "该 MOD 文件夹中没有预览图片"
+        case .noPreviewAvailable: return "暂无预览图"
         case .clickToEnlarge: return "点击查看大图"
         case .loadOrderInfo: return "MOD 加载顺序说明"
         case .loadOrderDesc: return "列表中的 MOD 按从上到下的顺序加载。拖拽行可调整加载顺序。"
         case .cannotLoad: return "无法加载"
         case .cannotLoadImage: return "无法加载图片"
         case .selectGamePath: return "选择 Rome2.app 或 Rome Remastered.app"
+        case .fileSizeLabel: return "文件大小"
+        case .modTypeLabel: return "MOD 类型"
+        case .lastModifiedLabel: return "最后修改"
+        case .unknown: return "未知"
+        case .currentNameLabel: return "当前文件名:"
+        case .enterNewFileName: return "输入新文件名（不含扩展名）"
+        case .searchModsPlaceholder: return "搜索 MOD..."
+        case .enabledCountFormat: return "已启用 %d / %d"
         case .settingsTitle: return "设置"
         case .pathSettings: return "路径设置"
-        case .pathSettingsDesc: return "如果默认路径不正确，可以在这里自定义 Workshop 目录和 user.script.txt 文件的位置。留空则使用默认路径。"
+        case .pathSettingsDesc: return "如果默认路径不正确，可自定义 Workshop 目录和 user.script.txt 位置。留空则使用默认路径。"
         case .workshopDir: return "Workshop 目录"
         case .workshopDirPrompt: return "输入 Workshop 路径或点击「浏览」选择..."
         case .custom: return "自定义"
@@ -287,16 +277,22 @@ enum L10n {
         case .moveUp: return "Move Up"
         case .moveDown: return "Move Down"
         case .renameMods: return "Normalize Names"
+        case .confirmRename: return "Confirm Rename"
+        case .renameMod: return "Rename MOD"
+        case .showInFinder: return "Show in Finder"
         case .scanning: return "Scanning..."
         case .loading: return "Loading..."
         case .noMods: return "No MODs"
         case .noModsHint: return "Click Scan or press ⌘R to load MOD list"
+        case .noModsLoaded: return "No MODs loaded\nClick Scan in toolbar"
+        case .noModsMatchSearch: return "No MODs match search"
         case .scriptFound(let p): return "Script: \(p)"
         case .scriptNotFound: return "user.script.txt not found"
         case .workshopConnected: return "Workshop Connected"
         case .workshopNotFound: return "Workshop Not Found"
         case .clickModHint: return "Click a MOD on the left to view details"
         case .detailHint: return "Details include MOD info and preview images"
+        case .selectModHint: return "Select a MOD from the list to view details"
         case .modCount(let n): return "\(n) MODs"
         case .scanResult(let n): return "Scanned \(n) MODs"
         case .enabledAll(let n): return "All \(n) MODs enabled"
@@ -318,18 +314,28 @@ enum L10n {
         case .folder: return "Folder"
         case .enabled: return "✓ Enabled"
         case .disabled: return "✗ Disabled"
+        case .enableMod: return "Enable this MOD"
         case .loadOrderLabel(let n): return "#\(n)"
         case .previewImages: return "Preview Images"
         case .noPreviewImages: return "No preview images in this MOD folder"
+        case .noPreviewAvailable: return "No preview available"
         case .clickToEnlarge: return "Click to enlarge"
         case .loadOrderInfo: return "Load Order Info"
         case .loadOrderDesc: return "MODs are loaded from top to bottom. Drag rows to adjust load order."
         case .cannotLoad: return "Cannot load"
         case .cannotLoadImage: return "Cannot load image"
         case .selectGamePath: return "Select Rome2.app or Rome Remastered.app"
+        case .fileSizeLabel: return "File Size"
+        case .modTypeLabel: return "MOD Type"
+        case .lastModifiedLabel: return "Last Modified"
+        case .unknown: return "Unknown"
+        case .currentNameLabel: return "Current filename:"
+        case .enterNewFileName: return "Enter new filename (without extension)"
+        case .searchModsPlaceholder: return "Search MODs..."
+        case .enabledCountFormat: return "%d / %d enabled"
         case .settingsTitle: return "Settings"
         case .pathSettings: return "Path Settings"
-        case .pathSettingsDesc: return "Customize Workshop directory and user.script.txt file location. Leave blank to use defaults."
+        case .pathSettingsDesc: return "Customize Workshop directory and user.script.txt location. Leave blank to use defaults."
         case .workshopDir: return "Workshop Directory"
         case .workshopDirPrompt: return "Enter Workshop path or click Browse..."
         case .custom: return "Custom"
@@ -384,8 +390,6 @@ enum L10n {
         }
     }
 }
-
-// MARK: - View 便捷扩展
 
 extension View {
     func loc(_ key: L10n) -> String {
