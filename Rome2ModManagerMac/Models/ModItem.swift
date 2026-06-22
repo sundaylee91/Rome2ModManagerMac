@@ -6,7 +6,7 @@
 import Foundation
 
 /// 表示一个 MOD 的数据模型
-struct ModItem: Identifiable, Codable, Equatable {
+struct ModItem: Identifiable, Codable, Equatable, Sendable {
     /// 唯一标识符
     var id = UUID()
     
