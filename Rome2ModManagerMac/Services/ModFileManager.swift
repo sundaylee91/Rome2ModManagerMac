@@ -43,11 +43,11 @@ class ModFileManager {
         // 典型路径：~/Library/Application Support/Steam/steamapps/workshop/content/214950/
         let steamWorkshop = "\(appSupport)/Steam/steamapps/workshop/content/214950"
         
-        // Rome 2 data 目录（通常在 ~/Library/Application Support/Feral Interactive/Rome 2/）
-        let rome2AppData = "\(appSupport)/Feral Interactive/Rome 2"
+        // Rome 2 user.script.txt 路径（Feral Interactive 版 Rome 2 的 VFS 映射路径）
+        let rome2ScriptPath = "\(appSupport)/Feral Interactive/Total War ROME II/VFS/User/AppData/Roaming/The Creative Assembly/Rome2/scripts/user.script.txt"
         
         self.defaultWorkshopPath = steamWorkshop
-        self.defaultUserScriptPath = "\(rome2AppData)/data/user.script.txt"
+        self.defaultUserScriptPath = rome2ScriptPath
         
         print("📁 ModFileManager 初始化")
         print("   默认 Workshop 路径: \(defaultWorkshopPath)")
@@ -182,7 +182,7 @@ class ModFileManager {
         // 按文件名排序
         mods.sort { $0.packFileName.localizedStandardCompare($1.packFileName) == .orderedAscending }
         
-        // 更新 loadOrder
+        // 更新 loadOrder（初始顺序 = 文件名排序）
         for (index, _) in mods.enumerated() {
             mods[index].loadOrder = index
         }
@@ -210,7 +210,7 @@ class ModFileManager {
     }
     
     /// 将 MOD 列表写入 user.script.txt
-    /// - Parameter mods: 要写入的 MOD 列表（仅写入启用的 MOD）
+    /// - Parameter mods: 要写入的 MOD 列表（仅写入启用的 MOD，按当前列表顺序）
     /// - Parameter existingContent: 现有文件内容中需要保留的非 MOD 行
     func writeUserScript(mods: [ModItem], preserving existingContent: String? = nil) throws {
         // 确保 scripts 目录存在
@@ -246,7 +246,7 @@ class ModFileManager {
             }
         }
         
-        // 写入所有启用的 MOD（按 loadOrder 排序）
+        // 写入所有启用的 MOD，保持当前列表顺序（loadOrder）
         let enabledMods = mods
             .filter { $0.isEnabled }
             .sorted { $0.loadOrder < $1.loadOrder }

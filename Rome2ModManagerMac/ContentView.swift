@@ -101,6 +101,8 @@ struct ContentView: View {
                         }
                         .onMove { source, destination in
                             viewModel.mods.move(fromOffsets: source, toOffset: destination)
+                            // 拖拽后同步 loadOrder 到新的列表位置
+                            viewModel.updateLoadOrder()
                         }
                     }
                     .listStyle(.inset)

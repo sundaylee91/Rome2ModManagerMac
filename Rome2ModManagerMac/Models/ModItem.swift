@@ -40,14 +40,9 @@ struct ModItem: Identifiable, Codable, Equatable, Sendable {
     }
     
     /// 生成 user.script.txt 中的一行
+    /// 示例: mod "____dei_cn.pack";
     func toScriptLine() -> String {
-        let modPath: String
-        if let relative = relativePath, !relative.isEmpty {
-            modPath = "\"\(relative)/\(packFileName)\""
-        } else {
-            modPath = "\"\(packFileName)\""
-        }
-        return "mod \(modPath);"
+        return "mod \"\(packFileName)\";"
     }
     
     static func == (lhs: ModItem, rhs: ModItem) -> Bool {
