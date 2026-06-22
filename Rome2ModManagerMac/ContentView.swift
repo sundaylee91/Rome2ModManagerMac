@@ -212,7 +212,6 @@ struct ContentView: View {
             // 不清空 modPreviewImage，让已加载的图保留便于重命名复用
         }
         // 📸 扫描完成后，后台并发预加载所有 MOD 缩略图（TaskGroup 并行）
-        //    加载完后静默填充 modPreviewImage，等同于后台「模拟点击重命名」
         .onChange(of: viewModel.mods.count) { newCount in
             guard newCount > 0 else { return }
             let mods = viewModel.mods
@@ -223,17 +222,6 @@ struct ContentView: View {
                     allUrls.append(contentsOf: viewModel.imagesForMod(mod))
                 }
                 await ImageThumbnailCache.shared.preloadAll(urls: allUrls, maxSize: 320)
-
-                // 🔑 静默预热重命名预览图：为每个 MOD 预存第一张图
-                //    用户首次点击重命名时图片已就绪，无需等待
-                for mod in mods {
-                    if let firstUrl = viewModel.imagesForMod(mod).first,
-                       let image = ImageThumbnailCache.shared.cachedThumbnail(for: firstUrl) {
-                        await MainActor.run {
-                            modPreviewImage[mod.id] = image
-                        }
-                    }
-                }
             }
         }
         .sheet(isPresented: $showSettings) {
