@@ -17,6 +17,7 @@ struct ContentView: View {
     @State private var renamingMod: ModItem?
     @State private var renamingModImages: [URL] = []
     @State private var selectedModImages: [URL] = []
+    @State private var renameSheetId = UUID()
     
     var body: some View {
         ZStack {
@@ -88,6 +89,7 @@ struct ContentView: View {
                                     mod: $mod,
                                     isSelected: viewModel.selectedModId == mod.id
                                 ) {
+                                    renameSheetId = UUID()
                                     renamingMod = mod
                                     renameText = mod.displayName
                                     renamingModImages = viewModel.imagesForMod(mod)
@@ -206,6 +208,7 @@ struct ContentView: View {
                 onCancel: { showRenameSheet = false }
             )
             .environmentObject(loc)
+            .id(renameSheetId)
         }
     }
     
@@ -270,7 +273,7 @@ struct RenameSheetView: View {
     
     @EnvironmentObject var loc: LocalizationManager
     @State private var previewImage: NSImage?
-    @State private var imageLoadAttempted = false
+    @State private var isLoading = true
     
     var body: some View {
         VStack(spacing: 20) {
@@ -279,7 +282,7 @@ struct RenameSheetView: View {
                 .font(.title2)
                 .fontWeight(.bold)
             
-            // MOD 预览图（取第一张，异步加载）
+            // MOD 预览图（取第一张，后台异步加载）
             if let nsImage = previewImage {
                 Image(nsImage: nsImage)
                     .resizable()
@@ -287,7 +290,7 @@ struct RenameSheetView: View {
                     .frame(maxWidth: 320, maxHeight: 180)
                     .cornerRadius(8)
                     .shadow(color: .black.opacity(0.1), radius: 6, x: 0, y: 3)
-            } else if !imageLoadAttempted {
+            } else if isLoading {
                 // 加载中
                 VStack(spacing: 8) {
                     ProgressView()
@@ -341,32 +344,27 @@ struct RenameSheetView: View {
         }
         .padding(30)
         .frame(width: 420, height: 420)
-        .onAppear {
-            loadPreviewImage()
+        .task {
+            await loadPreviewImage()
         }
     }
     
-    /// 异步加载预览图，带重试机制解决首次打开图片不显示的问题
-    private func loadPreviewImage() {
+    /// 后台异步加载预览图，避免阻塞主线程，解决首次打开图片不显示的问题
+    private func loadPreviewImage() async {
         guard let url = imageURLs.first else {
-            imageLoadAttempted = true
+            isLoading = false
             return
         }
         
-        // 先尝试同步加载（大多数情况足够）
-        if let img = NSImage(contentsOf: url) {
+        // 在后台线程读取文件数据，避免主线程 I/O 阻塞
+        let imageData = await Task.detached(priority: .userInitiated) {
+            return try? Data(contentsOf: url)
+        }.value
+        
+        if let data = imageData, let img = NSImage(data: data) {
             previewImage = img
-            imageLoadAttempted = true
-            return
         }
-        
-        // 同步加载失败，短暂延迟后重试（文件可能被其他进程占用）
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            if let img = NSImage(contentsOf: url) {
-                self.previewImage = img
-            }
-            self.imageLoadAttempted = true
-        }
+        isLoading = false
     }
 }
 
