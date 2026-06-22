@@ -21,7 +21,7 @@ struct ContentView: View {
     @State private var renameSheetId = UUID()
     
     // 🔑 启动时后台预加载的图片缓存（缩略图），重命名弹窗从缓存直接取
-    @State private var imageCache: [String: NSImage] = [:]
+    @State private var imageCache: [UUID: NSImage] = [:]
     
     var body: some View {
         ZStack {
