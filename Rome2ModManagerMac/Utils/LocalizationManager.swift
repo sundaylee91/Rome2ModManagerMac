@@ -77,6 +77,9 @@ enum L10n {
     case refreshOk(Int)
     case noModsToSave
     
+    // 拖拽排序
+    case orderChanged
+    
     // MOD 详情
     case fileName, status, loadOrder, folder
     case enabled, disabled
@@ -174,6 +177,7 @@ enum L10n {
         case .pathSet(let p): return "已设置路径: \(p)"
         case .refreshOk(let n): return "列表已刷新，共 \(n) 个 MOD"
         case .noModsToSave: return "没有 MOD 可写入"
+        case .orderChanged: return "排序已更新"
         case .fileName: return "文件名"
         case .status: return "状态"
         case .loadOrder: return "加载顺序"
@@ -290,6 +294,7 @@ enum L10n {
         case .pathSet(let p): return "Path set: \(p)"
         case .refreshOk(let n): return "List refreshed: \(n) MODs total"
         case .noModsToSave: return "No MODs to save"
+        case .orderChanged: return "Order updated"
         case .fileName: return "Filename"
         case .status: return "Status"
         case .loadOrder: return "Load Order"
