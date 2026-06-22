@@ -8,17 +8,21 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
+/// Sheet 专用数据模型：用 .sheet(item:) 替代 .sheet(isPresented:) + .id()
+/// 从根源上消除 @State 批量提交的时序问题
+struct RenameSheetData: Identifiable {
+    let id = UUID()
+    let mod: ModItem
+    let previewImages: [NSImage]
+}
+
 struct ContentView: View {
     @EnvironmentObject var viewModel: ModListViewModel
     @EnvironmentObject var loc: LocalizationManager
     @State private var showSettings = false
-    @State private var showRenameSheet = false
     @State private var renameText = ""
-    @State private var renamingMod: ModItem?
-    @State private var renamingModImages: [URL] = []
-    @State private var renamePreviewImages: [NSImage] = []
+    @State private var renameSheetData: RenameSheetData?
     @State private var selectedModImages: [URL] = []
-    @State private var renameSheetId = UUID()
 
     /// ModDetailView 加载完毕后把图片存这里，重命名窗口直接用（零开销）
     @State private var modPreviewImage: [UUID: NSImage] = [:]
@@ -93,27 +97,22 @@ struct ContentView: View {
                                     mod: $mod,
                                     isSelected: viewModel.selectedModId == mod.id
                                 ) {
-                                    renameSheetId = UUID()
-                                    renamingMod = mod
                                     renameText = mod.displayName
 
-                                    // 🔑 直接复用 ModDetailView 已加载的图片（零开销）
+                                    // 🔑 直接复用 ModDetailView / 预热缓存中的图片（零开销）
+                                    let images: [NSImage]
                                     if let preview = modPreviewImage[mod.id] {
-                                        renamePreviewImages = [preview]
+                                        images = [preview]
                                     } else {
-                                        // 极端情况：用户未选中过该 mod 就点重命名
+                                        // 极端情况：缓存未命中，同步生成缩略图
                                         let urls = viewModel.imagesForMod(mod)
-                                        renamingModImages = urls
-                                        renamePreviewImages = urls.compactMap {
+                                        images = urls.compactMap {
                                             ImageThumbnailCache.shared.cachedThumbnail(for: $0)
                                                 ?? ImageThumbnailCache.shared.generateAndCache(for: $0, maxSize: 320)
                                         }
                                     }
-                                    // 🔧 延迟一个 RunLoop 弹出 sheet，确保 @State 已全部提交
-                                    //    修复「首次点击重命名不显示图片」的 SwiftUI 时序 bug
-                                    DispatchQueue.main.async {
-                                        showRenameSheet = true
-                                    }
+                                    // ✅ .sheet(item:) 由 SwiftUI 内部管理生命周期，不依赖 @State 提交时序
+                                    renameSheetData = RenameSheetData(mod: mod, previewImages: images)
                                 }
                                 .environmentObject(loc)
                             }
@@ -255,22 +254,19 @@ struct ContentView: View {
                 .environmentObject(viewModel)
                 .environmentObject(loc)
         }
-        .sheet(isPresented: $showRenameSheet) {
+        .sheet(item: $renameSheetData) { data in
             RenameSheetView(
-                modName: renamingMod?.displayName ?? "",
-                packFileName: renamingMod?.packFileName ?? "",
-                previewImages: renamePreviewImages,
+                modName: data.mod.displayName,
+                packFileName: data.mod.packFileName,
+                previewImages: data.previewImages,
                 renameText: $renameText,
                 onConfirm: {
-                    if let mod = renamingMod {
-                        viewModel.renameMod(mod, newName: renameText)
-                    }
-                    showRenameSheet = false
+                    viewModel.renameMod(data.mod, newName: renameText)
+                    renameSheetData = nil
                 },
-                onCancel: { showRenameSheet = false }
+                onCancel: { renameSheetData = nil }
             )
             .environmentObject(loc)
-            .id(renameSheetId)
         }
     }
 
