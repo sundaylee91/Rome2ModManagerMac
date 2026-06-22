@@ -6,34 +6,38 @@
 //
 
 import SwiftUI
+import AppKit
+
+/// 全局通知：打开关于窗口
+extension Notification.Name {
+    static let showAboutWindow = Notification.Name("showAboutWindow")
+}
 
 @main
 struct Rome2ModManagerMacApp: App {
     @StateObject private var viewModel = ModListViewModel()
     @StateObject private var locManager = LocalizationManager.shared
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     var body: some Scene {
-        // 主窗口
         WindowGroup {
             ContentView()
                 .environmentObject(viewModel)
                 .environmentObject(locManager)
                 .frame(minWidth: 700, minHeight: 450)
+                .onReceive(NotificationCenter.default.publisher(for: .showAboutWindow)) { _ in
+                    openAboutWindow()
+                }
         }
         .defaultSize(width: 950, height: 580)
         .windowResizability(.contentMinSize)
         .commands {
-            // 移除 "New Window" 菜单项
             CommandGroup(replacing: .newItem) {}
 
-            // 替换系统关于窗口为自定义窗口
+            // 替换系统 About 为自定义关于窗口
             CommandGroup(replacing: .appInfo) {
                 Button("About \(AppInfo.appName)") {
-                    NSApplication.shared.orderFrontStandardAboutPanel(nil)
-                    // 延迟替换系统关于窗口内容
-                    DispatchQueue.main.async {
-                        showCustomAbout()
-                    }
+                    NotificationCenter.default.post(name: .showAboutWindow, object: nil)
                 }
             }
 
@@ -51,7 +55,7 @@ struct Rome2ModManagerMacApp: App {
             }
         }
 
-        // 自定义关于窗口（独立窗口，用户也可直接通过菜单打开）
+        // 自定义关于窗口
         Window("About \(AppInfo.appName)", id: "about") {
             AboutView()
         }
@@ -59,30 +63,39 @@ struct Rome2ModManagerMacApp: App {
         .windowResizability(.contentSize)
     }
 
-    /// 显示自定义关于窗口
-    private func showCustomAbout() {
-        // 关闭系统关于面板
-        if let systemAbout = NSApp.windows.first(where: {
-            $0.className == "NSAboutPanel" || $0.title.contains("About")
-        }) {
-            systemAbout.close()
+    private func openAboutWindow() {
+        // 先尝试找到已存在的关于窗口
+        for window in NSApp.windows {
+            if window.identifier?.rawValue == "about" {
+                window.makeKeyAndOrderFront(nil)
+                return
+            }
         }
+        // 窗口不存在时，用 SwiftUI 的方式创建
+        // 通过 openWindow action (available via Notification -> Scene)
+        NSApp.sendAction(Selector(("showAboutWindow:")), to: NSApp.delegate, from: nil)
+    }
+}
 
-        // 打开自定义关于窗口
-        if let window = NSApp.windows.first(where: { $0.identifier?.rawValue == "about" }) {
-            window.makeKeyAndOrderFront(nil)
-        } else {
-            // 如果窗口还不存在，通过 openWindow 创建
-            // 使用 NSWorkspace 或其他方式打开
-            openAboutWindow()
-        }
+// MARK: - App Delegate
+
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        // App 启动完成后的初始化
     }
 
-    private func openAboutWindow() {
-        // 使用 SwiftUI 的 openWindow 环境值
-        if let windowScene = NSApp.connectedScenes.first as? NSWindowScene {
-            // 尝试通过 window scene 打开
-            NSApp.sendAction(Selector(("showAboutWindow:")), to: nil, from: nil)
+    /// 手动触发 SwiftUI 的关于窗口
+    @objc func showAboutWindow(_ sender: Any?) {
+        // 通过 Window scene 打开 id 为 "about" 的窗口
+        if let windowScene = NSApp.connectedScenes.first {
+            // 使用 SwiftUI 内部机制打开窗口
+            // 如果上面 NotificationCenter 方式失败，这里做 fallback
+            let userInfo: [String: Any] = ["windowID": "about"]
+            NotificationCenter.default.post(
+                name: Notification.Name("NSWindowWillOpenNotification"),
+                object: nil,
+                userInfo: userInfo
+            )
         }
     }
 }
