@@ -269,6 +269,8 @@ struct RenameSheetView: View {
     let onCancel: () -> Void
     
     @EnvironmentObject var loc: LocalizationManager
+    @State private var previewImage: NSImage?
+    @State private var imageLoadAttempted = false
     
     var body: some View {
         VStack(spacing: 20) {
@@ -277,15 +279,24 @@ struct RenameSheetView: View {
                 .font(.title2)
                 .fontWeight(.bold)
             
-            // MOD 预览图（取第一张）
-            if let firstImage = imageURLs.first,
-               let nsImage = NSImage(contentsOf: firstImage) {
+            // MOD 预览图（取第一张，异步加载）
+            if let nsImage = previewImage {
                 Image(nsImage: nsImage)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(maxWidth: 320, maxHeight: 180)
                     .cornerRadius(8)
                     .shadow(color: .black.opacity(0.1), radius: 6, x: 0, y: 3)
+            } else if !imageLoadAttempted {
+                // 加载中
+                VStack(spacing: 8) {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                    Text(loc.str(.loading))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: 320, minHeight: 100)
             } else {
                 // 无预览图时显示 MOD 图标占位
                 VStack(spacing: 8) {
@@ -330,6 +341,32 @@ struct RenameSheetView: View {
         }
         .padding(30)
         .frame(width: 420, height: 420)
+        .onAppear {
+            loadPreviewImage()
+        }
+    }
+    
+    /// 异步加载预览图，带重试机制解决首次打开图片不显示的问题
+    private func loadPreviewImage() {
+        guard let url = imageURLs.first else {
+            imageLoadAttempted = true
+            return
+        }
+        
+        // 先尝试同步加载（大多数情况足够）
+        if let img = NSImage(contentsOf: url) {
+            previewImage = img
+            imageLoadAttempted = true
+            return
+        }
+        
+        // 同步加载失败，短暂延迟后重试（文件可能被其他进程占用）
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            if let img = NSImage(contentsOf: url) {
+                self.previewImage = img
+            }
+            self.imageLoadAttempted = true
+        }
     }
 }
 
