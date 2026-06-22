@@ -271,7 +271,7 @@ final class ModListViewModel: ObservableObject {
     
     // MARK: - Toast 辅助
     
-    private func showToast(_ message: String, type: ToastType) {
+    func showToast(_ message: String, type: ToastType) {
         toastMessage = message
         toastType = type
         

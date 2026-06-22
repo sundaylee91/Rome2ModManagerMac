@@ -39,6 +39,14 @@ struct ContentView: View {
                         Divider()
                             .frame(height: 20)
                         
+                        Button(action: { launchGame() }) {
+                            Label(loc.str(.launchGame), systemImage: "play.fill")
+                        }
+                        .help(loc.str(.launchHelp))
+                        
+                        Divider()
+                            .frame(height: 20)
+                        
                         Button(action: { showSettings = true }) {
                             Label(loc.str(.settings), systemImage: "gearshape")
                         }
@@ -214,6 +222,47 @@ struct ContentView: View {
         } message: {
             Text(loc.str(.renamePrompt))
         }
+    }
+    
+    // MARK: - 启动游戏
+    
+    /// 按优先级尝试启动 Rome 2 Total War：
+    /// 1. 用户自定义 .app 路径
+    /// 2. Steam URL scheme (steam://run/214950)
+    /// 3. 自动检测 Steam 安装目录
+    func launchGame() {
+        // 1. 用户自定义路径
+        if let customPath = AppSettings.shared.customGamePath, !customPath.isEmpty {
+            if FileManager.default.fileExists(atPath: customPath) {
+                NSWorkspace.shared.open(URL(fileURLWithPath: customPath))
+                viewModel.showToast(loc.str(.gameLaunched("Rome 2")), type: .success)
+                return
+            } else {
+                viewModel.showToast(loc.str(.gamePathInvalid), type: .error)
+                return
+            }
+        }
+        
+        // 2. Steam URL scheme
+        if let steamURL = URL(string: "steam://run/214950"),
+           NSWorkspace.shared.urlForApplication(toOpen: steamURL) != nil {
+            NSWorkspace.shared.open(steamURL)
+            viewModel.showToast(loc.str(.gameLaunched("Rome 2 (Steam)")), type: .success)
+            return
+        }
+        
+        // 3. 自动检测 Steam 安装目录
+        let homeDir = NSHomeDirectory()
+        let commonPath = "\(homeDir)/Library/Application Support/Steam/steamapps/common/Total War ROME II"
+        let appPath = "\(commonPath)/Total War ROME II.app"
+        if FileManager.default.fileExists(atPath: appPath) {
+            NSWorkspace.shared.open(URL(fileURLWithPath: appPath))
+            viewModel.showToast(loc.str(.gameLaunched("Rome 2")), type: .success)
+            return
+        }
+        
+        // 全部失败
+        viewModel.showToast(loc.str(.gamePathInvalid), type: .error)
     }
 }
 
@@ -450,6 +499,7 @@ struct SettingsView: View {
     
     @State private var workshopPathText: String = ""
     @State private var userScriptPathText: String = ""
+    @State private var gamePathText: String = ""
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -479,6 +529,52 @@ struct SettingsView: View {
                 }
                 .pickerStyle(.segmented)
                 .frame(width: 330)
+            }
+            
+            Divider()
+            
+            // 游戏路径
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text(loc.str(.gamePath))
+                        .font(.headline)
+                    if let path = AppSettings.shared.customGamePath, !path.isEmpty {
+                        Text("(\(loc.str(.custom)))")
+                            .font(.caption)
+                            .foregroundColor(.orange)
+                    } else {
+                        Text("(\(loc.str(.default)))")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
+                HStack(spacing: 8) {
+                    TextField(loc.str(.gamePathPrompt), text: $gamePathText)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.caption)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .onChange(of: gamePathText) { newValue in
+                            AppSettings.shared.customGamePath = newValue
+                        }
+                    
+                    Button(loc.str(.browse)) {
+                        selectGamePath()
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+                
+                HStack(spacing: 4) {
+                    let hasPath = AppSettings.shared.customGamePath.map { FileManager.default.fileExists(atPath: $0) } ?? true
+                    Image(systemName: hasPath ? "checkmark.circle.fill" : "xmark.circle.fill")
+                        .foregroundColor(hasPath ? .green : .orange)
+                        .font(.caption)
+                    Text(hasPath ? loc.str(.dirExists) : loc.str(.dirNotExists))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
             }
             
             Divider()
@@ -584,6 +680,7 @@ struct SettingsView: View {
                     viewModel.resetPathsToDefault()
                     workshopPathText = ""
                     userScriptPathText = ""
+                    gamePathText = ""
                 }
                 .buttonStyle(.bordered)
                 
@@ -597,10 +694,29 @@ struct SettingsView: View {
             }
         }
         .padding()
-        .frame(width: 520, height: 500)
+        .frame(width: 520, height: 600)
         .onAppear {
             workshopPathText = viewModel.customWorkshopPath
             userScriptPathText = viewModel.customUserScriptPath
+            gamePathText = AppSettings.shared.customGamePath ?? ""
+        }
+    }
+    
+    // MARK: - 选择游戏路径
+    
+    func selectGamePath() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.allowedContentTypes = [.application]
+        panel.message = loc.str(.selectGamePath)
+        panel.prompt = loc.str(.choose)
+        
+        if panel.runModal() == .OK, let url = panel.url {
+            AppSettings.shared.customGamePath = url.path
+            gamePathText = url.path
+            viewModel.showToast(loc.str(.gamePathSet(url.lastPathComponent)), type: .success)
         }
     }
 }

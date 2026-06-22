@@ -17,6 +17,7 @@ final class AppSettings {
     private enum Keys {
         static let customWorkshopPath = "custom_workshop_path"
         static let customUserScriptPath = "custom_user_script_path"
+        static let customGamePath = "custom_game_path"
     }
     
     private init() {}
@@ -55,11 +56,29 @@ final class AppSettings {
         }
     }
     
+    // MARK: - 自定义游戏路径
+    
+    /// 用户自定义的 Rome2.app 路径（nil 或空字符串表示自动检测/Steam）
+    var customGamePath: String? {
+        get {
+            let value = defaults.string(forKey: Keys.customGamePath)
+            return (value?.isEmpty == true) ? nil : value
+        }
+        set {
+            if let path = newValue, !path.isEmpty {
+                defaults.set(path, forKey: Keys.customGamePath)
+            } else {
+                defaults.removeObject(forKey: Keys.customGamePath)
+            }
+        }
+    }
+    
     // MARK: - 重置
     
     /// 重置所有自定义路径，恢复默认设置
     func resetAll() {
         defaults.removeObject(forKey: Keys.customWorkshopPath)
         defaults.removeObject(forKey: Keys.customUserScriptPath)
+        defaults.removeObject(forKey: Keys.customGamePath)
     }
 }

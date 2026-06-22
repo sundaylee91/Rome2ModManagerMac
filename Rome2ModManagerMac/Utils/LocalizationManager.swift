@@ -127,6 +127,9 @@ enum L10n {
     case confirmRenameAll, confirmRenameAllMsg(Int)
     case renaming
     
+    // 游戏路径（新增）
+    case gamePath, gamePathPrompt, launchHelp, gamePathSet(String)
+    
     var zh: String {
         switch self {
         case .appName: return "Rome 2 Mod 管理器"
@@ -241,6 +244,10 @@ enum L10n {
         case .confirmRenameAll: return "确认批量重命名"
         case .confirmRenameAllMsg(let n): return "将重命名 \(n) 个 MOD 文件为规范化名称（中文转拼音），是否继续？"
         case .renaming: return "重命名中..."
+        case .gamePath: return "游戏路径"
+        case .gamePathPrompt: return "留空则通过 Steam 启动，或选择 Rome2 .app"
+        case .launchHelp: return "启动 Rome 2 Total War"
+        case .gamePathSet(let p): return "已设置游戏路径: \(p)"
         }
     }
     
@@ -358,6 +365,10 @@ enum L10n {
         case .confirmRenameAll: return "Confirm Batch Rename"
         case .confirmRenameAllMsg(let n): return "Rename \(n) MOD files to normalized names (Chinese → Pinyin). Continue?"
         case .renaming: return "Renaming..."
+        case .gamePath: return "Game Path"
+        case .gamePathPrompt: return "Leave blank to launch via Steam, or select Rome2 .app"
+        case .launchHelp: return "Launch Rome 2 Total War"
+        case .gamePathSet(let p): return "Game path set: \(p)"
         }
     }
 }
