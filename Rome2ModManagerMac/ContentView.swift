@@ -20,6 +20,9 @@ struct ContentView: View {
     @State private var selectedModImages: [URL] = []
     @State private var renameSheetId = UUID()
 
+    /// ModDetailView 加载完毕后把图片存这里，重命名窗口直接用（零开销）
+    @State private var modPreviewImage: [UUID: NSImage] = [:]
+
     var body: some View {
         ZStack {
             HSplitView {
@@ -94,13 +97,17 @@ struct ContentView: View {
                                     renamingMod = mod
                                     renameText = mod.displayName
 
-                                    // 🔑 从 ImageThumbnailCache 取缩略图
-                                    // 第一次：CGImageSource 直出缩略图（毫秒级）
-                                    // 后续：内存/磁盘缓存命中（微秒级）
-                                    let urls = viewModel.imagesForMod(mod)
-                                    renamingModImages = urls
-                                    renamePreviewImages = urls.compactMap {
-                                        ImageThumbnailCache.shared.generateAndCache(for: $0, maxSize: 320)
+                                    // 🔑 直接复用 ModDetailView 已加载的图片（零开销）
+                                    if let preview = modPreviewImage[mod.id] {
+                                        renamePreviewImages = [preview]
+                                    } else {
+                                        // 极端情况：用户未选中过该 mod 就点重命名
+                                        let urls = viewModel.imagesForMod(mod)
+                                        renamingModImages = urls
+                                        renamePreviewImages = urls.compactMap {
+                                            ImageThumbnailCache.shared.cachedThumbnail(for: $0)
+                                                ?? ImageThumbnailCache.shared.generateAndCache(for: $0, maxSize: 320)
+                                        }
                                     }
                                     showRenameSheet = true
                                 }
@@ -154,7 +161,10 @@ struct ContentView: View {
                    let selectedMod = viewModel.mods.first(where: { $0.id == selectedId }) {
                     ModDetailView(
                         mod: selectedMod,
-                        imageUrls: selectedModImages
+                        imageUrls: selectedModImages,
+                        onFirstImageLoaded: { image in
+                            modPreviewImage[selectedMod.id] = image
+                        }
                     )
                     .environmentObject(loc)
                     .frame(minWidth: 200, idealWidth: 320)
@@ -197,6 +207,10 @@ struct ContentView: View {
                 selectedModImages = []
             }
         }
+        // 清掉上一个 mod 的预览图引用（选中新 mod 时旧图不再有效）
+        .onChange(of: viewModel.selectedModId) { _ in
+            // 不清空 modPreviewImage，让已加载的图保留便于重命名复用
+        }
         // 📸 扫描完成后，后台并发预加载所有 MOD 缩略图（TaskGroup 并行）
         .onChange(of: viewModel.mods.count) { newCount in
             guard newCount > 0 else { return }
@@ -207,7 +221,6 @@ struct ContentView: View {
                 for mod in mods {
                     allUrls.append(contentsOf: viewModel.imagesForMod(mod))
                 }
-                // ImageThumbnailCache.preloadAll 内部用 TaskGroup 并行
                 await ImageThumbnailCache.shared.preloadAll(urls: allUrls, maxSize: 320)
             }
         }
@@ -303,7 +316,7 @@ struct RenameSheetView: View {
                 .font(.title2)
                 .fontWeight(.bold)
 
-            // MOD 预览图（预加载完成，零等待）
+            // MOD 预览图（直接复用 ModDetailView 已加载的图片，零等待 ⚡️）
             if let nsImage = previewImages.first {
                 Image(nsImage: nsImage)
                     .resizable()
@@ -464,6 +477,8 @@ struct ModRowView: View {
 struct ModDetailView: View {
     let mod: ModItem
     let imageUrls: [URL]
+    /// ModDetailView 加载完第一张预览图后回调，供 ContentView 缓存给重命名窗口复用
+    var onFirstImageLoaded: ((NSImage) -> Void)? = nil
     @EnvironmentObject var loc: LocalizationManager
 
     var body: some View {
@@ -497,7 +512,7 @@ struct ModDetailView: View {
                     }
 
                     LazyVStack(spacing: 10) {
-                        ForEach(imageUrls, id: \.self) { url in
+                        ForEach(Array(imageUrls.enumerated()), id: \.element) { index, url in
                             VStack(spacing: 4) {
                                 if let nsImage = ImageThumbnailCache.shared.generateAndCache(for: url, maxSize: 600) {
                                     Image(nsImage: nsImage)
@@ -507,11 +522,15 @@ struct ModDetailView: View {
                                         .cornerRadius(6)
                                         .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
                                         .onTapGesture {
-                                            // 使用 macOS 原生 Preview.app 打开图片
-                                            // 避免 SwiftUI .sheet 首次弹出空白窗口的 bug
                                             NSWorkspace.shared.open(url)
                                         }
                                         .help(loc.str(.clickToEnlarge))
+                                        .onAppear {
+                                            // 🔑 第一张图加载完成后通知 ContentView 缓存
+                                            if index == 0 {
+                                                onFirstImageLoaded?(nsImage)
+                                            }
+                                        }
                                 } else {
                                     HStack {
                                         Image(systemName: "photo.badge.exclamationmark")
@@ -864,25 +883,20 @@ struct SettingsView: View {
 
     // MARK: - 在 Finder 中定位游戏路径
 
-    /// 点击「游戏路径」标题时，跳转到对应的文件夹
     func openGamePathInFinder() {
-        // 优先自定义路径
         if let customPath = AppSettings.shared.customGamePath, !customPath.isEmpty {
             let url = URL(fileURLWithPath: customPath)
             if FileManager.default.fileExists(atPath: customPath) {
-                // 选中 .app 文件在 Finder 中高亮显示
                 NSWorkspace.shared.activateFileViewerSelecting([url])
                 return
             }
         }
 
-        // 默认：Steam 安装目录
         let homeDir = NSHomeDirectory()
         let commonPath = "\(homeDir)/Library/Application Support/Steam/steamapps/common/Total War ROME II"
         if FileManager.default.fileExists(atPath: commonPath) {
             NSWorkspace.shared.open(URL(fileURLWithPath: commonPath))
         } else {
-            // 回退：Steam common 父目录
             let steamCommon = "\(homeDir)/Library/Application Support/Steam/steamapps/common"
             if FileManager.default.fileExists(atPath: steamCommon) {
                 NSWorkspace.shared.open(URL(fileURLWithPath: steamCommon))
