@@ -11,6 +11,7 @@ import UniformTypeIdentifiers
 struct ContentView: View {
     @EnvironmentObject var viewModel: ModListViewModel
     @State private var showDiagnostics = false
+    @State private var showSettings = false
     @State private var showRenameAlert = false
     @State private var renameText = ""
     @State private var renamingMod: ModItem?
@@ -34,6 +35,11 @@ struct ContentView: View {
                     
                     Divider()
                         .frame(height: 20)
+                    
+                    Button(action: { showSettings = true }) {
+                        Label("设置", systemImage: "gearshape")
+                    }
+                    .help("设置路径")
                     
                     Button(action: { showDiagnostics = true }) {
                         Label("诊断", systemImage: "magnifyingglass")
@@ -160,6 +166,10 @@ struct ContentView: View {
             DiagnosticsView()
                 .environmentObject(viewModel)
         }
+        .sheet(isPresented: $showSettings) {
+            SettingsView()
+                .environmentObject(viewModel)
+        }
         .alert("重命名", isPresented: $showRenameAlert) {
             TextField("新名称", text: $renameText)
             Button("确定") {
@@ -269,6 +279,159 @@ struct DetailRow: View {
             Text(value)
                 .font(.body)
                 .textSelection(.enabled)
+        }
+    }
+}
+
+// MARK: - 设置视图
+
+struct SettingsView: View {
+    @EnvironmentObject var viewModel: ModListViewModel
+    @Environment(\.dismiss) var dismiss
+    
+    @State private var workshopPathText: String = ""
+    @State private var userScriptPathText: String = ""
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("路径设置")
+                .font(.title2)
+                .fontWeight(.bold)
+            
+            Text("如果默认路径不正确，可以在这里自定义 Workshop 目录和 user.script.txt 文件的位置。留空则使用默认路径。")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            
+            Divider()
+            
+            // Workshop 路径
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text("Workshop 目录")
+                        .font(.headline)
+                    if viewModel.isUsingCustomWorkshopPath {
+                        Text("(自定义)")
+                            .font(.caption)
+                            .foregroundColor(.orange)
+                    } else {
+                        Text("(默认)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
+                HStack(spacing: 8) {
+                    TextField("输入 Workshop 路径或点击「浏览」选择...", text: $workshopPathText)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.caption)
+                        .onChange(of: workshopPathText) { newValue in
+                            viewModel.customWorkshopPath = newValue
+                        }
+                    
+                    Button("浏览") {
+                        viewModel.selectWorkshopPath()
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+                
+                HStack(spacing: 4) {
+                    Image(systemName: viewModel.workshopExists ? "checkmark.circle.fill" : "xmark.circle.fill")
+                        .foregroundColor(viewModel.workshopExists ? .green : .red)
+                        .font(.caption)
+                    Text(viewModel.workshopExists ? "目录存在" : "目录不存在")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            
+            // user.script.txt 路径
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text("user.script.txt")
+                        .font(.headline)
+                    if viewModel.isUsingCustomUserScriptPath {
+                        Text("(自定义)")
+                            .font(.caption)
+                            .foregroundColor(.orange)
+                    } else {
+                        Text("(默认)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
+                HStack(spacing: 8) {
+                    TextField("输入 user.script.txt 路径或点击「浏览」选择...", text: $userScriptPathText)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.caption)
+                        .onChange(of: userScriptPathText) { newValue in
+                            viewModel.customUserScriptPath = newValue
+                        }
+                    
+                    Button("浏览") {
+                        viewModel.selectUserScriptPath()
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+                
+                if let path = viewModel.userScriptPath {
+                    HStack(spacing: 4) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                            .font(.caption)
+                        Text("文件存在")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                } else {
+                    HStack(spacing: 4) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.orange)
+                            .font(.caption)
+                        Text("文件不存在（写入时会自动创建）")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            
+            Divider()
+            
+            // 重置按钮
+            HStack {
+                Button("恢复默认路径") {
+                    viewModel.resetPathsToDefault()
+                    workshopPathText = ""
+                    userScriptPathText = ""
+                }
+                .buttonStyle(.bordered)
+                
+                Spacer()
+                
+                Button("关闭") {
+                    dismiss()
+                }
+                .keyboardShortcut(.return)
+                .buttonStyle(.borderedProminent)
+            }
+            
+            if let toast = viewModel.toastMessage {
+                Text(toast)
+                    .font(.caption)
+                    .foregroundColor(.green)
+                    .padding(8)
+                    .background(Color.green.opacity(0.1))
+                    .cornerRadius(6)
+            }
+        }
+        .padding()
+        .frame(width: 520, height: 420)
+        .onAppear {
+            workshopPathText = viewModel.customWorkshopPath
+            userScriptPathText = viewModel.customUserScriptPath
         }
     }
 }

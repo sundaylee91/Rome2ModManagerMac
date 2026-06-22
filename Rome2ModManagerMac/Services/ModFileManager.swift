@@ -11,17 +11,27 @@ class ModFileManager {
     
     // MARK: - 路径配置
     
-    /// Rome 2 的数据目录（通常是游戏根目录下的 data 文件夹）
-    private let rome2DataPath: String
+    /// 当前使用的 Workshop 路径
+    private var workshopPath: String {
+        if let custom = AppSettings.shared.customWorkshopPath, !custom.isEmpty {
+            return custom
+        }
+        return defaultWorkshopPath
+    }
     
-    /// Steam Workshop MOD 文件夹
-    private let workshopPath: String
+    /// 当前使用的 user.script.txt 路径
+    var userScriptPath: String {
+        if let custom = AppSettings.shared.customUserScriptPath, !custom.isEmpty {
+            return custom
+        }
+        return defaultUserScriptPath
+    }
     
-    /// user.script.txt 的完整路径
-    let userScriptPath: String
+    /// 默认 Workshop 路径
+    private let defaultWorkshopPath: String
     
-    /// 脚本目录
-    private let scriptsPath: String
+    /// 默认 user.script.txt 路径
+    private let defaultUserScriptPath: String
     
     // MARK: - 初始化
     
@@ -36,14 +46,18 @@ class ModFileManager {
         // Rome 2 data 目录（通常在 ~/Library/Application Support/Feral Interactive/Rome 2/）
         let rome2AppData = "\(appSupport)/Feral Interactive/Rome 2"
         
-        self.workshopPath = steamWorkshop
-        self.rome2DataPath = rome2AppData
-        self.scriptsPath = "\(rome2AppData)/data"
-        self.userScriptPath = "\(scriptsPath)/user.script.txt"
+        self.defaultWorkshopPath = steamWorkshop
+        self.defaultUserScriptPath = "\(rome2AppData)/data/user.script.txt"
         
         print("📁 ModFileManager 初始化")
-        print("   Workshop 路径: \(workshopPath)")
-        print("   user.script.txt 路径: \(userScriptPath)")
+        print("   默认 Workshop 路径: \(defaultWorkshopPath)")
+        print("   默认 user.script.txt 路径: \(defaultUserScriptPath)")
+        if let custom = AppSettings.shared.customWorkshopPath, !custom.isEmpty {
+            print("   ⚙️ 自定义 Workshop 路径: \(custom)")
+        }
+        if let custom = AppSettings.shared.customUserScriptPath, !custom.isEmpty {
+            print("   ⚙️ 自定义 user.script.txt 路径: \(custom)")
+        }
     }
     
     // MARK: - Workshop 路径
@@ -61,6 +75,21 @@ class ModFileManager {
     /// 检查 user.script.txt 是否存在
     func userScriptExists() -> Bool {
         return FileManager.default.fileExists(atPath: userScriptPath)
+    }
+    
+    /// 是否使用了自定义路径
+    var isUsingCustomWorkshopPath: Bool {
+        if let custom = AppSettings.shared.customWorkshopPath, !custom.isEmpty {
+            return true
+        }
+        return false
+    }
+    
+    var isUsingCustomUserScriptPath: Bool {
+        if let custom = AppSettings.shared.customUserScriptPath, !custom.isEmpty {
+            return true
+        }
+        return false
     }
     
     // MARK: - 扫描 MOD

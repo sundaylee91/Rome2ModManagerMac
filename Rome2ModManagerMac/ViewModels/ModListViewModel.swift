@@ -59,6 +59,71 @@ final class ModListViewModel: ObservableObject {
         mods.filter { !$0.isEnabled }.count
     }
     
+    /// 是否使用了自定义 Workshop 路径
+    var isUsingCustomWorkshopPath: Bool {
+        return fileManager.isUsingCustomWorkshopPath
+    }
+    
+    /// 是否使用了自定义 user.script.txt 路径
+    var isUsingCustomUserScriptPath: Bool {
+        return fileManager.isUsingCustomUserScriptPath
+    }
+    
+    // MARK: - 路径配置
+    
+    /// 自定义 Workshop 路径
+    var customWorkshopPath: String {
+        get { AppSettings.shared.customWorkshopPath ?? "" }
+        set { AppSettings.shared.customWorkshopPath = newValue }
+    }
+    
+    /// 自定义 user.script.txt 路径
+    var customUserScriptPath: String {
+        get { AppSettings.shared.customUserScriptPath ?? "" }
+        set { AppSettings.shared.customUserScriptPath = newValue }
+    }
+    
+    /// 重置为默认路径
+    func resetPathsToDefault() {
+        AppSettings.shared.resetAll()
+        errorMessage = nil
+        toastMessage = "已恢复默认路径，请重新扫描"
+        clearToastAfterDelay()
+    }
+    
+    /// 从 NSOpenPanel 选择 Workshop 目录
+    func selectWorkshopPath() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.message = "请选择 Steam Workshop 的 Rome 2 MOD 目录 (content/214950)"
+        panel.prompt = "选择"
+        
+        if panel.runModal() == .OK, let url = panel.url {
+            AppSettings.shared.customWorkshopPath = url.path
+            toastMessage = "已设置 Workshop 路径，请重新扫描"
+            clearToastAfterDelay()
+        }
+    }
+    
+    /// 从 NSOpenPanel 选择 user.script.txt 文件
+    func selectUserScriptPath() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.allowedContentTypes = [.text, .plainText]
+        panel.message = "请选择 user.script.txt 文件"
+        panel.prompt = "选择"
+        
+        if panel.runModal() == .OK, let url = panel.url {
+            AppSettings.shared.customUserScriptPath = url.path
+            toastMessage = "已设置 user.script.txt 路径"
+            clearToastAfterDelay()
+        }
+    }
+    
     // MARK: - 操作
     
     /// 扫描 Workshop MOD
