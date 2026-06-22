@@ -325,9 +325,6 @@ struct ModDetailView: View {
     let imageUrls: [URL]
     @EnvironmentObject var loc: LocalizationManager
     
-    @State private var fullImageUrl: URL?
-    @State private var showFullImage = false
-    
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
@@ -369,8 +366,9 @@ struct ModDetailView: View {
                                         .cornerRadius(6)
                                         .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
                                         .onTapGesture {
-                                            fullImageUrl = url
-                                            showFullImage = true
+                                            // 使用 macOS 原生 Preview.app 打开图片
+                                            // 避免 SwiftUI .sheet 首次弹出空白窗口的 bug
+                                            NSWorkspace.shared.open(url)
                                         }
                                         .help(loc.str(.clickToEnlarge))
                                 } else {
@@ -422,57 +420,6 @@ struct ModDetailView: View {
             }
             .padding()
         }
-        .sheet(isPresented: $showFullImage) {
-            if let url = fullImageUrl {
-                FullImageView(imageUrl: url)
-                    .environmentObject(loc)
-            }
-        }
-    }
-}
-
-// MARK: - 大图查看
-
-struct FullImageView: View {
-    let imageUrl: URL
-    @Environment(\.dismiss) var dismiss
-    @EnvironmentObject var loc: LocalizationManager
-    
-    var body: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Text(imageUrl.lastPathComponent)
-                    .font(.headline)
-                Spacer()
-                Button(loc.str(.close)) {
-                    dismiss()
-                }
-                .keyboardShortcut(.return)
-            }
-            .padding()
-            .background(Color(NSColor.controlBackgroundColor))
-            
-            Divider()
-            
-            if let nsImage = NSImage(contentsOf: imageUrl) {
-                ScrollView([.horizontal, .vertical]) {
-                    Image(nsImage: nsImage)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .padding()
-                }
-            } else {
-                VStack {
-                    Image(systemName: "photo.badge.exclamationmark")
-                        .font(.system(size: 48))
-                        .foregroundColor(.secondary)
-                    Text(loc.str(.cannotLoadImage))
-                        .foregroundColor(.secondary)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
-        }
-        .frame(minWidth: 500, minHeight: 400)
     }
 }
 
