@@ -18,13 +18,12 @@ struct AppInfo {
     static let copyrightEN = "Copyright © 2026 Sunday Lee. All rights reserved."
     // ═══════════════════════════════════════
 
-    // ── 语言检测 ──
+    // ── 语言检测：跟随软件设置（非系统语言）──
     static var isChinese: Bool {
-        let preferred = Locale.preferredLanguages.first ?? "en"
-        return preferred.hasPrefix("zh")
+        LocalizationManager.shared.isChinese
     }
 
-    // ── 根据系统语言自动选择 ──
+    // ── 根据软件语言设置自动选择 ──
     static var author: String         { isChinese ? authorCN : authorEN }
     static var appDescription: String { isChinese ? descriptionCN : descriptionEN }
     static var copyrightText: String  { isChinese ? copyrightCN : copyrightEN }
