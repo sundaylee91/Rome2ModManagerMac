@@ -19,10 +19,7 @@ struct ContentView: View {
     @State private var renamePreviewImages: [NSImage] = []
     @State private var selectedModImages: [URL] = []
     @State private var renameSheetId = UUID()
-    
-    // 🔑 启动时后台预加载的图片缓存（缩略图），重命名弹窗从缓存直接取
-    @State private var imageCache: [UUID: NSImage] = [:]
-    
+
     var body: some View {
         ZStack {
             HSplitView {
@@ -37,22 +34,22 @@ struct ContentView: View {
                         .keyboardShortcut(.return, modifiers: [.command])
                         .focusEffectDisabled()
                         .focusable(false)
-                        
+
                         Button(action: { showSettings = true }) {
                             Label(loc.str(.settings), systemImage: "gearshape")
                         }
                         .help(loc.str(.settingsHelp))
                         .focusEffectDisabled()
                         .focusable(false)
-                        
+
                         Spacer()
-                        
+
                         if viewModel.isScanning {
                             ProgressView()
                                 .scaleEffect(0.7)
                                 .frame(width: 20, height: 20)
                         }
-                        
+
                         Text(loc.str(.modCount(viewModel.mods.count)))
                             .foregroundColor(.secondary)
                             .font(.caption)
@@ -60,9 +57,9 @@ struct ContentView: View {
                     .padding(.horizontal)
                     .padding(.vertical, 8)
                     .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
-                    
+
                     Divider()
-                    
+
                     // MOD 列表 (带拖拽排序)
                     if viewModel.mods.isEmpty && !viewModel.isScanning {
                         VStack(spacing: 16) {
@@ -75,7 +72,7 @@ struct ContentView: View {
                             Text(loc.str(.noModsHint))
                                 .font(.caption)
                                 .foregroundColor(.secondary)
-                            
+
                             if let error = viewModel.errorMessage {
                                 Text(error)
                                     .font(.caption)
@@ -96,12 +93,14 @@ struct ContentView: View {
                                     renameSheetId = UUID()
                                     renamingMod = mod
                                     renameText = mod.displayName
-                                    // 优先从启动缓存取缩略图，毫秒级命中；缓存未命中则同步加载
-                                    if let cached = imageCache[mod.id] {
-                                        renamePreviewImages = [cached]
-                                    } else {
-                                        renamingModImages = viewModel.imagesForMod(mod)
-                                        renamePreviewImages = renamingModImages.compactMap { NSImage(contentsOf: $0) }
+
+                                    // 🔑 从 ImageThumbnailCache 取缩略图
+                                    // 第一次：CGImageSource 直出缩略图（毫秒级）
+                                    // 后续：内存/磁盘缓存命中（微秒级）
+                                    let urls = viewModel.imagesForMod(mod)
+                                    renamingModImages = urls
+                                    renamePreviewImages = urls.compactMap {
+                                        ImageThumbnailCache.shared.generateAndCache(for: $0, maxSize: 320)
                                     }
                                     showRenameSheet = true
                                 }
@@ -112,9 +111,9 @@ struct ContentView: View {
                         .listStyle(.inset)
                         .focusable(true)
                     }
-                    
+
                     Divider()
-                    
+
                     // 状态栏
                     HStack {
                         if let scriptPath = viewModel.userScriptPath {
@@ -134,9 +133,9 @@ struct ContentView: View {
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
-                        
+
                         Spacer()
-                        
+
                         Circle()
                             .fill(viewModel.workshopExists ? Color.green : Color.red)
                             .frame(width: 8, height: 8)
@@ -149,7 +148,7 @@ struct ContentView: View {
                     .background(Color(NSColor.controlBackgroundColor).opacity(0.3))
                 }
                 .frame(minWidth: 300)
-                
+
                 // 右侧：详情面板
                 if let selectedId = viewModel.selectedModId,
                    let selectedMod = viewModel.mods.first(where: { $0.id == selectedId }) {
@@ -174,7 +173,7 @@ struct ContentView: View {
                     .frame(minWidth: 200, idealWidth: 320)
                 }
             }
-            
+
             // Toast 横幅覆盖层
             VStack {
                 if let message = viewModel.toastMessage {
@@ -198,22 +197,18 @@ struct ContentView: View {
                 selectedModImages = []
             }
         }
-        // 当 mod 列表加载完成后，后台预加载所有缩略图到缓存
+        // 📸 扫描完成后，后台并发预加载所有 MOD 缩略图（TaskGroup 并行）
         .onChange(of: viewModel.mods.count) { newCount in
             guard newCount > 0 else { return }
             let mods = viewModel.mods
-            let uncached = mods.filter { imageCache[$0.id] == nil }
-            guard !uncached.isEmpty else { return }
-            
+
             Task {
-                for mod in uncached {
-                    let urls = viewModel.imagesForMod(mod)
-                    if let firstURL = urls.first,
-                       let image = NSImage(contentsOf: firstURL) {
-                        imageCache[mod.id] = image.thumbnail(maxWidth: 300, maxHeight: 200)
-                    }
-                    await Task.yield()  // 让 UI 保持响应
+                var allUrls: [URL] = []
+                for mod in mods {
+                    allUrls.append(contentsOf: viewModel.imagesForMod(mod))
                 }
+                // ImageThumbnailCache.preloadAll 内部用 TaskGroup 并行
+                await ImageThumbnailCache.shared.preloadAll(urls: allUrls, maxSize: 320)
             }
         }
         .sheet(isPresented: $showSettings) {
@@ -239,9 +234,9 @@ struct ContentView: View {
             .id(renameSheetId)
         }
     }
-    
+
     // MARK: - 启动游戏
-    
+
     /// 按优先级尝试启动 Rome 2 Total War：
     /// 1. 用户自定义 .app 路径
     /// 2. Steam URL scheme (steam://run/214950)
@@ -253,7 +248,7 @@ struct ContentView: View {
         } else {
             return  // 写入失败，阻止启动（错误提示已在 writeUserScriptSilently 中显示）
         }
-        
+
         // 1. 用户自定义路径
         if let customPath = AppSettings.shared.customGamePath, !customPath.isEmpty {
             if FileManager.default.fileExists(atPath: customPath) {
@@ -265,7 +260,7 @@ struct ContentView: View {
                 return
             }
         }
-        
+
         // 2. Steam URL scheme
         if let steamURL = URL(string: "steam://run/214950"),
            NSWorkspace.shared.urlForApplication(toOpen: steamURL) != nil {
@@ -273,7 +268,7 @@ struct ContentView: View {
             viewModel.showToast(loc.str(.gameLaunched("Rome 2 (Steam)")), type: .success)
             return
         }
-        
+
         // 3. 自动检测 Steam 安装目录
         let homeDir = NSHomeDirectory()
         let commonPath = "\(homeDir)/Library/Application Support/Steam/steamapps/common/Total War ROME II"
@@ -283,7 +278,7 @@ struct ContentView: View {
             viewModel.showToast(loc.str(.gameLaunched("Rome 2")), type: .success)
             return
         }
-        
+
         // 全部失败
         viewModel.showToast(loc.str(.gamePathInvalid), type: .error)
     }
@@ -298,17 +293,17 @@ struct RenameSheetView: View {
     @Binding var renameText: String
     let onConfirm: () -> Void
     let onCancel: () -> Void
-    
+
     @EnvironmentObject var loc: LocalizationManager
-    
+
     var body: some View {
         VStack(spacing: 20) {
             // 标题
             Text(loc.str(.renameTitle))
                 .font(.title2)
                 .fontWeight(.bold)
-            
-            // MOD 预览图（直接显示预加载的图片，零时序问题）
+
+            // MOD 预览图（预加载完成，零等待）
             if let nsImage = previewImages.first {
                 Image(nsImage: nsImage)
                     .resizable()
@@ -333,12 +328,12 @@ struct RenameSheetView: View {
                         .fill(Color(NSColor.controlBackgroundColor).opacity(0.5))
                 )
             }
-            
+
             // 提示文字
             Text(loc.str(.renamePrompt))
                 .font(.callout)
                 .foregroundColor(.secondary)
-            
+
             // 输入框
             TextField(loc.str(.renamePlaceholder), text: $renameText)
                 .textFieldStyle(.roundedBorder)
@@ -346,12 +341,12 @@ struct RenameSheetView: View {
                 .onSubmit {
                     onConfirm()
                 }
-            
+
             // 按钮
             HStack(spacing: 16) {
                 Button(loc.str(.cancel), action: onCancel)
                     .keyboardShortcut(.escape)
-                
+
                 Button(loc.str(.confirm), action: onConfirm)
                     .keyboardShortcut(.return)
                     .buttonStyle(.borderedProminent)
@@ -369,20 +364,20 @@ struct ToastBanner: View {
     let message: String
     let type: ToastType
     let onDismiss: () -> Void
-    
+
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: type.icon)
                 .foregroundColor(type.color)
                 .font(.title3)
-            
+
             Text(message)
                 .font(.callout)
                 .foregroundColor(.primary)
                 .lineLimit(2)
-            
+
             Spacer()
-            
+
             Button(action: onDismiss) {
                 Image(systemName: "xmark")
                     .font(.caption2)
@@ -413,7 +408,7 @@ struct ModRowView: View {
     var isSelected: Bool
     var onRename: () -> Void
     @EnvironmentObject var loc: LocalizationManager
-    
+
     var body: some View {
         HStack(spacing: 10) {
             // 拖拽排序手柄
@@ -421,31 +416,31 @@ struct ModRowView: View {
                 .font(.caption)
                 .foregroundColor(.secondary.opacity(0.4))
                 .frame(width: 12)
-            
+
             Toggle("", isOn: $mod.isEnabled)
                 .toggleStyle(.switch)
                 .controlSize(.small)
                 .labelsHidden()
-            
+
             Image(systemName: "doc.text")
                 .font(.title3)
                 .foregroundColor(mod.isEnabled ? .accentColor : .secondary)
                 .frame(width: 24)
-            
+
             VStack(alignment: .leading, spacing: 2) {
                 Text(mod.displayName)
                     .font(.body)
                     .foregroundColor(mod.isEnabled ? .primary : .secondary)
                     .lineLimit(1)
-                
+
                 Text(mod.packFileName)
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .lineLimit(1)
             }
-            
+
             Spacer()
-            
+
             Button(action: onRename) {
                 Image(systemName: "pencil")
                     .font(.body)
@@ -470,7 +465,7 @@ struct ModDetailView: View {
     let mod: ModItem
     let imageUrls: [URL]
     @EnvironmentObject var loc: LocalizationManager
-    
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
@@ -478,33 +473,33 @@ struct ModDetailView: View {
                     .font(.title3)
                     .fontWeight(.bold)
                     .lineLimit(2)
-                
+
                 Divider()
-                
+
                 Group {
                     DetailRow(label: loc.str(.fileName), value: mod.packFileName)
                     DetailRow(label: loc.str(.status), value: mod.isEnabled ? loc.str(.enabled) : loc.str(.disabled))
                     DetailRow(label: loc.str(.loadOrder), value: loc.str(.loadOrderLabel(mod.loadOrder + 1)))
-                    
+
                     if !mod.workshopSubfolder.isEmpty {
                         DetailRow(label: loc.str(.folder), value: mod.workshopSubfolder)
                     }
                 }
-                
+
                 if !imageUrls.isEmpty {
                     Divider()
-                    
+
                     HStack {
                         Image(systemName: "photo.on.rectangle")
                             .foregroundColor(.accentColor)
                         Text(loc.str(.previewImages))
                             .font(.headline)
                     }
-                    
+
                     LazyVStack(spacing: 10) {
                         ForEach(imageUrls, id: \.self) { url in
                             VStack(spacing: 4) {
-                                if let nsImage = NSImage(contentsOf: url) {
+                                if let nsImage = ImageThumbnailCache.shared.generateAndCache(for: url, maxSize: 600) {
                                     Image(nsImage: nsImage)
                                         .resizable()
                                         .aspectRatio(contentMode: .fit)
@@ -526,7 +521,7 @@ struct ModDetailView: View {
                                             .foregroundColor(.secondary)
                                     }
                                 }
-                                
+
                                 Text(url.lastPathComponent)
                                     .font(.caption2)
                                     .foregroundColor(.secondary)
@@ -550,9 +545,9 @@ struct ModDetailView: View {
                             .foregroundColor(.secondary)
                     }
                 }
-                
+
                 Divider()
-                
+
                 VStack(alignment: .leading, spacing: 4) {
                     Text(loc.str(.loadOrderInfo))
                         .font(.subheadline)
@@ -561,7 +556,7 @@ struct ModDetailView: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
-                
+
                 Spacer()
             }
             .padding()
@@ -574,7 +569,7 @@ struct ModDetailView: View {
 struct DetailRow: View {
     let label: String
     let value: String
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
             Text(label)
@@ -593,30 +588,30 @@ struct SettingsView: View {
     @EnvironmentObject var viewModel: ModListViewModel
     @EnvironmentObject var loc: LocalizationManager
     @Environment(\.dismiss) var dismiss
-    
+
     @State private var workshopPathText: String = ""
     @State private var userScriptPathText: String = ""
     @State private var gamePathText: String = ""
     @State private var showDiagnostics = false
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text(loc.str(.settingsTitle))
                 .font(.title2)
                 .fontWeight(.bold)
-            
+
             Text(loc.str(.pathSettingsDesc))
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
-            
+
             Divider()
-            
+
             // 界面语言
             VStack(alignment: .leading, spacing: 6) {
                 Text(loc.str(.language))
                     .font(.headline)
-                
+
                 Picker("", selection: Binding(
                     get: { loc.appLanguage },
                     set: { loc.appLanguage = $0 }
@@ -628,9 +623,9 @@ struct SettingsView: View {
                 .pickerStyle(.segmented)
                 .frame(width: 330)
             }
-            
+
             Divider()
-            
+
             // 游戏路径
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
@@ -650,7 +645,7 @@ struct SettingsView: View {
                             .foregroundColor(.secondary)
                     }
                 }
-                
+
                 HStack(spacing: 8) {
                     TextField(loc.str(.gamePathPrompt), text: $gamePathText)
                         .textFieldStyle(.roundedBorder)
@@ -660,14 +655,14 @@ struct SettingsView: View {
                         .onChange(of: gamePathText) { newValue in
                             AppSettings.shared.customGamePath = newValue
                         }
-                    
+
                     Button(loc.str(.browse)) {
                         selectGamePath()
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
                 }
-                
+
                 HStack(spacing: 4) {
                     let hasPath = AppSettings.shared.customGamePath.map { FileManager.default.fileExists(atPath: $0) } ?? true
                     Image(systemName: hasPath ? "checkmark.circle.fill" : "xmark.circle.fill")
@@ -678,9 +673,9 @@ struct SettingsView: View {
                         .foregroundColor(.secondary)
                 }
             }
-            
+
             Divider()
-            
+
             // Workshop 路径
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
@@ -704,7 +699,7 @@ struct SettingsView: View {
                             .foregroundColor(.secondary)
                     }
                 }
-                
+
                 HStack(spacing: 8) {
                     TextField(loc.str(.workshopDirPrompt), text: $workshopPathText)
                         .textFieldStyle(.roundedBorder)
@@ -712,14 +707,14 @@ struct SettingsView: View {
                         .onChange(of: workshopPathText) { newValue in
                             viewModel.customWorkshopPath = newValue
                         }
-                    
+
                     Button(loc.str(.browse)) {
                         viewModel.selectWorkshopPath()
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
                 }
-                
+
                 HStack(spacing: 4) {
                     Image(systemName: viewModel.workshopExists ? "checkmark.circle.fill" : "xmark.circle.fill")
                         .foregroundColor(viewModel.workshopExists ? .green : .red)
@@ -729,7 +724,7 @@ struct SettingsView: View {
                         .foregroundColor(.secondary)
                 }
             }
-            
+
             // user.script.txt 路径
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
@@ -753,7 +748,7 @@ struct SettingsView: View {
                             .foregroundColor(.secondary)
                     }
                 }
-                
+
                 HStack(spacing: 8) {
                     TextField(loc.str(.userScriptPrompt), text: $userScriptPathText)
                         .textFieldStyle(.roundedBorder)
@@ -761,14 +756,14 @@ struct SettingsView: View {
                         .onChange(of: userScriptPathText) { newValue in
                             viewModel.customUserScriptPath = newValue
                         }
-                    
+
                     Button(loc.str(.browse)) {
                         viewModel.selectUserScriptPath()
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
                 }
-                
+
                 if let path = viewModel.userScriptPath {
                     HStack(spacing: 4) {
                         Image(systemName: "checkmark.circle.fill")
@@ -789,16 +784,16 @@ struct SettingsView: View {
                     }
                 }
             }
-            
+
             Divider()
-            
+
             // 诊断区块
             VStack(alignment: .leading, spacing: 8) {
                 Button(action: { showDiagnostics.toggle() }) {
                     Label(loc.str(.diagnostics), systemImage: showDiagnostics ? "magnifyingglass.circle.fill" : "magnifyingglass")
                 }
                 .buttonStyle(.bordered)
-                
+
                 if showDiagnostics {
                     VStack(alignment: .leading, spacing: 8) {
                         DiagnosticRow(
@@ -806,19 +801,19 @@ struct SettingsView: View {
                             value: viewModel.workshopPath?.path ?? loc.str(.notSet),
                             exists: viewModel.workshopExists
                         )
-                        
+
                         DiagnosticRow(
                             label: loc.str(.userScriptPath),
                             value: viewModel.userScriptPath ?? loc.str(.notFound),
                             exists: viewModel.userScriptPath != nil
                         )
-                        
+
                         DiagnosticRow(
                             label: loc.str(.scannedPacks),
                             value: loc.str(.countUnit(viewModel.mods.count)),
                             exists: !viewModel.mods.isEmpty
                         )
-                        
+
                         if let error = viewModel.errorMessage {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(loc.str(.errorInfo))
@@ -836,9 +831,9 @@ struct SettingsView: View {
                     .padding(.vertical, 8)
                 }
             }
-            
+
             Divider()
-            
+
             // 按钮
             HStack {
                 Button(loc.str(.resetDefaults)) {
@@ -848,9 +843,9 @@ struct SettingsView: View {
                     gamePathText = ""
                 }
                 .buttonStyle(.bordered)
-                
+
                 Spacer()
-                
+
                 Button(loc.str(.close)) {
                     dismiss()
                 }
@@ -866,9 +861,9 @@ struct SettingsView: View {
             gamePathText = AppSettings.shared.customGamePath ?? ""
         }
     }
-    
+
     // MARK: - 在 Finder 中定位游戏路径
-    
+
     /// 点击「游戏路径」标题时，跳转到对应的文件夹
     func openGamePathInFinder() {
         // 优先自定义路径
@@ -880,7 +875,7 @@ struct SettingsView: View {
                 return
             }
         }
-        
+
         // 默认：Steam 安装目录
         let homeDir = NSHomeDirectory()
         let commonPath = "\(homeDir)/Library/Application Support/Steam/steamapps/common/Total War ROME II"
@@ -894,9 +889,9 @@ struct SettingsView: View {
             }
         }
     }
-    
+
     // MARK: - 选择游戏路径
-    
+
     func selectGamePath() {
         let panel = NSOpenPanel()
         panel.canChooseFiles = true
@@ -905,7 +900,7 @@ struct SettingsView: View {
         panel.allowedContentTypes = [.application]
         panel.message = loc.str(.selectGamePath)
         panel.prompt = loc.str(.choose)
-        
+
         if panel.runModal() == .OK, let url = panel.url {
             AppSettings.shared.customGamePath = url.path
             gamePathText = url.path
@@ -920,7 +915,7 @@ struct DiagnosticRow: View {
     let label: String
     let value: String
     let exists: Bool
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: 6) {
@@ -938,23 +933,6 @@ struct DiagnosticRow: View {
                 .lineLimit(2)
         }
         .padding(.vertical, 2)
-    }
-}
-
-// MARK: - NSImage 缩略图扩展
-
-extension NSImage {
-    /// 生成缩略图，限制最大宽高，用于内存缓存
-    func thumbnail(maxWidth: CGFloat, maxHeight: CGFloat) -> NSImage {
-        let ratio = min(maxWidth / size.width, maxHeight / size.height, 1.0)
-        let newSize = NSSize(width: size.width * ratio, height: size.height * ratio)
-        let thumb = NSImage(size: newSize)
-        thumb.lockFocus()
-        self.draw(in: NSRect(origin: .zero, size: newSize),
-                  from: NSRect(origin: .zero, size: size),
-                  operation: .copy, fraction: 1.0)
-        thumb.unlockFocus()
-        return thumb
     }
 }
 
