@@ -11,7 +11,6 @@ import UniformTypeIdentifiers
 struct ContentView: View {
     @EnvironmentObject var viewModel: ModListViewModel
     @EnvironmentObject var loc: LocalizationManager
-    @State private var showDiagnostics = false
     @State private var showSettings = false
     @State private var showRenameAlert = false
     @State private var renameText = ""
@@ -23,47 +22,20 @@ struct ContentView: View {
             HSplitView {
                 // 左侧：MOD 列表
                 VStack(spacing: 0) {
-                    // 工具栏
+                    // 工具栏 — 极简风格：仅启动游戏 + 设置
                     HStack {
-                        Button(action: { viewModel.scanMods() }) {
-                            Label(loc.str(.scanMods), systemImage: "arrow.triangle.2.circlepath")
-                        }
-                        .help(loc.str(.scanHelp))
-                        .focusEffectDisabled()
-                        .focusable(false)
-                        
-                        Button(action: { viewModel.writeUserScript() }) {
-                            Label(loc.str(.writeScript), systemImage: "square.and.arrow.down")
-                        }
-                        .help(loc.str(.writeHelp))
-                        .disabled(viewModel.mods.isEmpty)
-                        .focusEffectDisabled()
-                        .focusable(false)
-                        
-                        Divider()
-                            .frame(height: 20)
-                        
                         Button(action: { launchGame() }) {
                             Label(loc.str(.launchGame), systemImage: "play.fill")
                         }
                         .help(loc.str(.launchHelp))
+                        .keyboardShortcut(.return, modifiers: [.command])
                         .focusEffectDisabled()
                         .focusable(false)
-                        
-                        Divider()
-                            .frame(height: 20)
                         
                         Button(action: { showSettings = true }) {
                             Label(loc.str(.settings), systemImage: "gearshape")
                         }
                         .help(loc.str(.settingsHelp))
-                        .focusEffectDisabled()
-                        .focusable(false)
-                        
-                        Button(action: { showDiagnostics = true }) {
-                            Label(loc.str(.diagnostics), systemImage: "magnifyingglass")
-                        }
-                        .help(loc.str(.diagnosticsHelp))
                         .focusEffectDisabled()
                         .focusable(false)
                         
@@ -211,11 +183,6 @@ struct ContentView: View {
             } else {
                 selectedModImages = []
             }
-        }
-        .sheet(isPresented: $showDiagnostics) {
-            DiagnosticsView()
-                .environmentObject(viewModel)
-                .environmentObject(loc)
         }
         .sheet(isPresented: $showSettings) {
             SettingsView()
@@ -518,6 +485,7 @@ struct SettingsView: View {
     @State private var workshopPathText: String = ""
     @State private var userScriptPathText: String = ""
     @State private var gamePathText: String = ""
+    @State private var showDiagnostics = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -712,6 +680,53 @@ struct SettingsView: View {
             
             Divider()
             
+            // 诊断区块
+            VStack(alignment: .leading, spacing: 8) {
+                Button(action: { showDiagnostics.toggle() }) {
+                    Label(loc.str(.diagnostics), systemImage: showDiagnostics ? "magnifyingglass.circle.fill" : "magnifyingglass")
+                }
+                .buttonStyle(.bordered)
+                
+                if showDiagnostics {
+                    VStack(alignment: .leading, spacing: 8) {
+                        DiagnosticRow(
+                            label: loc.str(.workshopPath),
+                            value: viewModel.workshopPath?.path ?? loc.str(.notSet),
+                            exists: viewModel.workshopExists
+                        )
+                        
+                        DiagnosticRow(
+                            label: loc.str(.userScriptPath),
+                            value: viewModel.userScriptPath ?? loc.str(.notFound),
+                            exists: viewModel.userScriptPath != nil
+                        )
+                        
+                        DiagnosticRow(
+                            label: loc.str(.scannedPacks),
+                            value: loc.str(.countUnit(viewModel.mods.count)),
+                            exists: !viewModel.mods.isEmpty
+                        )
+                        
+                        if let error = viewModel.errorMessage {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(loc.str(.errorInfo))
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                Text(error)
+                                    .font(.caption)
+                                    .foregroundColor(.red)
+                                    .padding(8)
+                                    .background(Color.red.opacity(0.1))
+                                    .cornerRadius(6)
+                            }
+                        }
+                    }
+                    .padding(.vertical, 8)
+                }
+            }
+            
+            Divider()
+            
             // 按钮
             HStack {
                 Button(loc.str(.resetDefaults)) {
@@ -732,7 +747,7 @@ struct SettingsView: View {
             }
         }
         .padding()
-        .frame(width: 520, height: 600)
+        .frame(width: 520, height: showDiagnostics ? 650 : 600)
         .onAppear {
             workshopPathText = viewModel.customWorkshopPath
             userScriptPathText = viewModel.customUserScriptPath
@@ -787,67 +802,7 @@ struct SettingsView: View {
     }
 }
 
-// MARK: - 诊断视图
-
-struct DiagnosticsView: View {
-    @EnvironmentObject var viewModel: ModListViewModel
-    @EnvironmentObject var loc: LocalizationManager
-    @Environment(\.dismiss) var dismiss
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(loc.str(.diagnosticsTitle))
-                .font(.title2)
-                .fontWeight(.bold)
-            
-            Group {
-                DiagnosticRow(
-                    label: loc.str(.workshopPath),
-                    value: viewModel.workshopPath?.path ?? loc.str(.notSet),
-                    exists: viewModel.workshopExists
-                )
-                
-                DiagnosticRow(
-                    label: loc.str(.userScriptPath),
-                    value: viewModel.userScriptPath ?? loc.str(.notFound),
-                    exists: viewModel.userScriptPath != nil
-                )
-                
-                DiagnosticRow(
-                    label: loc.str(.scannedPacks),
-                    value: loc.str(.countUnit(viewModel.mods.count)),
-                    exists: !viewModel.mods.isEmpty
-                )
-            }
-            
-            if let error = viewModel.errorMessage {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(loc.str(.errorInfo))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Text(error)
-                        .font(.caption)
-                        .foregroundColor(.red)
-                        .padding(8)
-                        .background(Color.red.opacity(0.1))
-                        .cornerRadius(6)
-                }
-            }
-            
-            Spacer()
-            
-            HStack {
-                Spacer()
-                Button(loc.str(.close)) {
-                    dismiss()
-                }
-                .keyboardShortcut(.return)
-            }
-        }
-        .padding()
-        .frame(width: 500, height: 350)
-    }
-}
+// MARK: - 诊断行（设置页内复用）
 
 struct DiagnosticRow: View {
     let label: String
