@@ -20,9 +20,6 @@ struct ContentView: View {
     @State private var selectedModImages: [URL] = []
     @State private var renameSheetId = UUID()
 
-    /// ModDetailView 加载完毕后把图片存这里，重命名窗口直接用（零开销）
-    @State private var modPreviewImage: [UUID: NSImage] = [:]
-
     var body: some View {
         ZStack {
             HSplitView {
@@ -97,11 +94,9 @@ struct ContentView: View {
                                     renamingMod = mod
                                     renameText = mod.displayName
 
-                                    // 🔑 直接复用 ModDetailView 已加载的图片（零开销）
-                                    if let preview = modPreviewImage[mod.id] {
-                                        renamePreviewImages = [preview]
-                                    } else {
-                                        // 极端情况：用户未选中过该 mod 就点重命名
+                                    // renamePreviewImages 已在 ModDetailView 加载时设置好
+                                    // 极端情况（用户直接对未选中 mod 点重命名）才走回退
+                                    if renamePreviewImages.isEmpty {
                                         let urls = viewModel.imagesForMod(mod)
                                         renamingModImages = urls
                                         renamePreviewImages = urls.compactMap {
@@ -163,7 +158,9 @@ struct ContentView: View {
                         mod: selectedMod,
                         imageUrls: selectedModImages,
                         onFirstImageLoaded: { image in
-                            modPreviewImage[selectedMod.id] = image
+                            // 🔑 直接把图片写入重命名预览数组
+                            // Sheet 出现时图片已就绪，零帧延迟
+                            renamePreviewImages = [image]
                         }
                     )
                     .environmentObject(loc)
@@ -201,15 +198,13 @@ struct ContentView: View {
             viewModel.scanMods()
         }
         .onChange(of: viewModel.selectedModId) { newId in
+            // 切换选中 mod 时清掉旧的重命名预览图，等待新 mod 加载
+            renamePreviewImages = []
             if let id = newId, let mod = viewModel.mods.first(where: { $0.id == id }) {
                 selectedModImages = viewModel.imagesForMod(mod)
             } else {
                 selectedModImages = []
             }
-        }
-        // 清掉上一个 mod 的预览图引用（选中新 mod 时旧图不再有效）
-        .onChange(of: viewModel.selectedModId) { _ in
-            // 不清空 modPreviewImage，让已加载的图保留便于重命名复用
         }
         // 📸 扫描完成后，后台并发预加载所有 MOD 缩略图（TaskGroup 并行）
         .onChange(of: viewModel.mods.count) { newCount in
@@ -316,7 +311,7 @@ struct RenameSheetView: View {
                 .font(.title2)
                 .fontWeight(.bold)
 
-            // MOD 预览图（直接复用 ModDetailView 已加载的图片，零等待 ⚡️）
+            // MOD 预览图（图片已在 ModDetailView 加载时写入，零等待 ⚡️）
             if let nsImage = previewImages.first {
                 Image(nsImage: nsImage)
                     .resizable()
@@ -477,7 +472,7 @@ struct ModRowView: View {
 struct ModDetailView: View {
     let mod: ModItem
     let imageUrls: [URL]
-    /// ModDetailView 加载完第一张预览图后回调，供 ContentView 缓存给重命名窗口复用
+    /// ModDetailView 加载完第一张预览图后回调，直接写入 renamePreviewImages
     var onFirstImageLoaded: ((NSImage) -> Void)? = nil
     @EnvironmentObject var loc: LocalizationManager
 
@@ -526,7 +521,8 @@ struct ModDetailView: View {
                                         }
                                         .help(loc.str(.clickToEnlarge))
                                         .onAppear {
-                                            // 🔑 第一张图加载完成后通知 ContentView 缓存
+                                            // 🔑 第一张图加载完成后，直接写入重命名预览
+                                            // Sheet 出现时图片已就绪
                                             if index == 0 {
                                                 onFirstImageLoaded?(nsImage)
                                             }
