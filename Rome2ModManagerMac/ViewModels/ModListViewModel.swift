@@ -243,6 +243,13 @@ final class ModListViewModel: ObservableObject {
         }
     }
     
+    /// 拖拽排序：移动 MOD 并更新 loadOrder
+    func moveMod(from source: IndexSet, to destination: Int) {
+        mods.move(fromOffsets: source, toOffset: destination)
+        updateLoadOrder()
+        showToast(loc.str(.orderChanged), type: .info)
+    }
+    
     func updateLoadOrder() {
         for (index, _) in mods.enumerated() {
             mods[index].loadOrder = index

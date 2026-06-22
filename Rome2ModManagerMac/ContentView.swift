@@ -67,7 +67,7 @@ struct ContentView: View {
                     
                     Divider()
                     
-                    // MOD 列表
+                    // MOD 列表 (带拖拽排序)
                     if viewModel.mods.isEmpty && !viewModel.isScanning {
                         VStack(spacing: 16) {
                             Image(systemName: "tray")
@@ -91,7 +91,7 @@ struct ContentView: View {
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else {
-                        List {
+                        List(selection: $viewModel.selectedModId) {
                             ForEach($viewModel.mods) { $mod in
                                 ModRowView(
                                     mod: $mod,
@@ -101,17 +101,12 @@ struct ContentView: View {
                                     renameText = mod.displayName
                                     showRenameAlert = true
                                 }
-                                .onTapGesture {
-                                    viewModel.selectMod(mod.id)
-                                }
                                 .environmentObject(loc)
                             }
-                            .onMove { source, destination in
-                                viewModel.mods.move(fromOffsets: source, toOffset: destination)
-                                viewModel.updateLoadOrder()
-                            }
+                            .onMove(perform: viewModel.moveMod)
                         }
                         .listStyle(.inset)
+                        .environment(\.editMode, .constant(.active))
                     }
                     
                     Divider()
