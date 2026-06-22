@@ -33,14 +33,17 @@ class ModFileManager {
         // 典型路径：~/Library/Application Support/Steam/steamapps/workshop/content/214950/
         let steamWorkshop = "\(appSupport)/Steam/steamapps/workshop/content/214950"
         
-        // Rome 2 data 目录（通常在游戏 .app 包内或用户数据目录）
-        // macOS 上 Rome 2 的数据通常在 ~/Library/Application Support/Feral Interactive/Rome 2/
+        // Rome 2 data 目录（通常在 ~/Library/Application Support/Feral Interactive/Rome 2/）
         let rome2AppData = "\(appSupport)/Feral Interactive/Rome 2"
         
         self.workshopPath = steamWorkshop
         self.rome2DataPath = rome2AppData
         self.scriptsPath = "\(rome2AppData)/data"
         self.userScriptPath = "\(scriptsPath)/user.script.txt"
+        
+        print("📁 ModFileManager 初始化")
+        print("   Workshop 路径: \(workshopPath)")
+        print("   user.script.txt 路径: \(userScriptPath)")
     }
     
     // MARK: - Workshop 路径
@@ -62,26 +65,55 @@ class ModFileManager {
     
     // MARK: - 扫描 MOD
     
-    /// 递归扫描 Workshop 目录中的所有 .pack 文件
+    /// 支持的文件扩展名（不区分大小写）
+    private let supportedExtensions = ["pack", "bin"]
+    
+    /// 递归扫描 Workshop 目录中的所有 MOD 文件
     /// - Returns: 扫描到的 MOD 列表
     func scanWorkshopMods() -> [ModItem] {
         var mods: [ModItem] = []
         let fileManager = FileManager.default
+        
+        print("🔍 开始扫描 Workshop 目录...")
+        print("   路径: \(workshopPath)")
         
         guard fileManager.fileExists(atPath: workshopPath) else {
             print("⚠️ Workshop 目录不存在: \(workshopPath)")
             return mods
         }
         
+        // 先列出 workshop 根目录下有哪些子目录
+        if let topLevelContents = try? fileManager.contentsOfDirectory(atPath: workshopPath) {
+            print("   Workshop 根目录内容 (\(topLevelContents.count) 项):")
+            for item in topLevelContents.prefix(20) {
+                var isDir: ObjCBool = false
+                let full = "\(workshopPath)/\(item)"
+                fileManager.fileExists(atPath: full, isDirectory: &isDir)
+                print("     \(isDir.boolValue ? "📁" : "📄") \(item)")
+            }
+            if topLevelContents.count > 20 {
+                print("     ... 还有 \(topLevelContents.count - 20) 项")
+            }
+        }
+        
+        // 收集所有找到的文件（用于调试）
+        var allFilesFound: [String] = []
+        
         // 递归遍历所有子目录（每个 MOD 有自己的数字 ID 文件夹）
         if let enumerator = fileManager.enumerator(atPath: workshopPath) {
-            var orderIndex = 0
-            
             for case let relativePath as String in enumerator {
                 let fullPath = "\(workshopPath)/\(relativePath)"
                 
-                // 只处理 .pack 文件
-                guard relativePath.hasSuffix(".pack") else { continue }
+                // 记录所有文件用于调试
+                allFilesFound.append(relativePath)
+                
+                // 检查扩展名（不区分大小写）
+                let lowercased = relativePath.lowercased()
+                let hasValidExtension = supportedExtensions.contains { ext in
+                    lowercased.hasSuffix(".\(ext)")
+                }
+                
+                guard hasValidExtension else { continue }
                 
                 // 检查是否为文件（而非目录）
                 var isDirectory: ObjCBool = false
@@ -97,12 +129,24 @@ class ModFileManager {
                 
                 let mod = ModItem(
                     packFileName: fileName,
-                    loadOrder: orderIndex,
+                    loadOrder: mods.count,
                     relativePath: parentDir.isEmpty ? nil : parentDir
                 )
                 
+                print("   ✅ 发现 MOD: \(fileName) (路径: \(parentDir))")
                 mods.append(mod)
-                orderIndex += 1
+            }
+        }
+        
+        // 如果没有找到 MOD，打印调试信息
+        if mods.isEmpty {
+            print("⚠️ 未找到 .pack/.bin 文件")
+            print("   共遍历了 \(allFilesFound.count) 个文件/目录:")
+            for f in allFilesFound.prefix(30) {
+                print("     \(f)")
+            }
+            if allFilesFound.count > 30 {
+                print("     ... 还有 \(allFilesFound.count - 30) 项")
             }
         }
         
