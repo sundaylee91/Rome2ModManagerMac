@@ -20,6 +20,9 @@ struct ContentView: View {
     @State private var selectedModImages: [URL] = []
     @State private var renameSheetId = UUID()
     
+    // 🔑 启动时后台预加载的图片缓存（缩略图），重命名弹窗从缓存直接取
+    @State private var imageCache: [String: NSImage] = [:]
+    
     var body: some View {
         ZStack {
             HSplitView {
@@ -93,8 +96,13 @@ struct ContentView: View {
                                     renameSheetId = UUID()
                                     renamingMod = mod
                                     renameText = mod.displayName
-                                    renamingModImages = viewModel.imagesForMod(mod)
-                                    renamePreviewImages = renamingModImages.compactMap { NSImage(contentsOf: $0) }
+                                    // 优先从启动缓存取缩略图，毫秒级命中；缓存未命中则同步加载
+                                    if let cached = imageCache[mod.id] {
+                                        renamePreviewImages = [cached]
+                                    } else {
+                                        renamingModImages = viewModel.imagesForMod(mod)
+                                        renamePreviewImages = renamingModImages.compactMap { NSImage(contentsOf: $0) }
+                                    }
                                     showRenameSheet = true
                                 }
                                 .environmentObject(loc)
@@ -188,6 +196,24 @@ struct ContentView: View {
                 selectedModImages = viewModel.imagesForMod(mod)
             } else {
                 selectedModImages = []
+            }
+        }
+        // 当 mod 列表加载完成后，后台预加载所有缩略图到缓存
+        .onChange(of: viewModel.mods.count) { newCount in
+            guard newCount > 0 else { return }
+            let mods = viewModel.mods
+            let uncached = mods.filter { imageCache[$0.id] == nil }
+            guard !uncached.isEmpty else { return }
+            
+            Task {
+                for mod in uncached {
+                    let urls = viewModel.imagesForMod(mod)
+                    if let firstURL = urls.first,
+                       let image = NSImage(contentsOf: firstURL) {
+                        imageCache[mod.id] = image.thumbnail(maxWidth: 300, maxHeight: 200)
+                    }
+                    await Task.yield()  // 让 UI 保持响应
+                }
             }
         }
         .sheet(isPresented: $showSettings) {
@@ -422,7 +448,7 @@ struct ModRowView: View {
             
             Button(action: onRename) {
                 Image(systemName: "pencil")
-                    .font(.caption)
+                    .font(.body)
             }
             .buttonStyle(.borderless)
             .opacity(isSelected ? 1 : 0.4)
@@ -912,6 +938,23 @@ struct DiagnosticRow: View {
                 .lineLimit(2)
         }
         .padding(.vertical, 2)
+    }
+}
+
+// MARK: - NSImage 缩略图扩展
+
+extension NSImage {
+    /// 生成缩略图，限制最大宽高，用于内存缓存
+    func thumbnail(maxWidth: CGFloat, maxHeight: CGFloat) -> NSImage {
+        let ratio = min(maxWidth / size.width, maxHeight / size.height, 1.0)
+        let newSize = NSSize(width: size.width * ratio, height: size.height * ratio)
+        let thumb = NSImage(size: newSize)
+        thumb.lockFocus()
+        self.draw(in: NSRect(origin: .zero, size: newSize),
+                  from: NSRect(origin: .zero, size: size),
+                  operation: .copy, fraction: 1.0)
+        thumb.unlockFocus()
+        return thumb
     }
 }
 
