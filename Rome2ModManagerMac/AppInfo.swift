@@ -1,7 +1,7 @@
 import Foundation
 
 struct AppInfo {
-    static let appName = "Rome II Mod Manager"
+    static let appName = "Rome2 Mod Manager Mac"
     static let version = "1.0.0"       // ⭐ 改版本号
     static let build = "1"             // ⭐ 改 Build 号
 
@@ -11,11 +11,11 @@ struct AppInfo {
     static let authorCN   = "Sunday Lee"
     static let authorEN   = "Sunday Lee"
 
-    static let descriptionCN = "Mac 上的 Total War: Rome II 模组管理器\n快速扫描、管理模组并生成用户脚本。"
-    static let descriptionEN = "A Total War: Rome II mod manager for Mac.\nScan, manage mods and generate user script."
+    static let descriptionCN = "Mac 上的 Total War: Rome II 模组管理器。"
+    static let descriptionEN = "A Total War: Rome II mod manager for Mac."
 
-    static let copyrightCN = "版权所有 © 2026 Sunday Lee。保留所有权利。"
-    static let copyrightEN = "Copyright © 2026 Sunday Lee. All rights reserved."
+    static let copyrightCN = "2026\nhttps://github.com/sundaylee91/Rome2ModManagerMac"
+    static let copyrightEN = "2026\nhttps://github.com/sundaylee91/Rome2ModManagerMac"
     // ═══════════════════════════════════════
 
     // ── 语言检测：跟随软件设置（非系统语言）──
