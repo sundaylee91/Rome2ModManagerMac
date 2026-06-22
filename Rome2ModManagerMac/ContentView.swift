@@ -30,6 +30,7 @@ struct ContentView: View {
                         }
                         .help(loc.str(.scanHelp))
                         .focusEffectDisabled()
+                        .focusable(false)
                         
                         Button(action: { viewModel.writeUserScript() }) {
                             Label(loc.str(.writeScript), systemImage: "square.and.arrow.down")
@@ -37,6 +38,7 @@ struct ContentView: View {
                         .help(loc.str(.writeHelp))
                         .disabled(viewModel.mods.isEmpty)
                         .focusEffectDisabled()
+                        .focusable(false)
                         
                         Divider()
                             .frame(height: 20)
@@ -46,6 +48,7 @@ struct ContentView: View {
                         }
                         .help(loc.str(.launchHelp))
                         .focusEffectDisabled()
+                        .focusable(false)
                         
                         Divider()
                             .frame(height: 20)
@@ -55,12 +58,14 @@ struct ContentView: View {
                         }
                         .help(loc.str(.settingsHelp))
                         .focusEffectDisabled()
+                        .focusable(false)
                         
                         Button(action: { showDiagnostics = true }) {
                             Label(loc.str(.diagnostics), systemImage: "magnifyingglass")
                         }
                         .help(loc.str(.diagnosticsHelp))
                         .focusEffectDisabled()
+                        .focusable(false)
                         
                         Spacer()
                         
@@ -119,6 +124,7 @@ struct ContentView: View {
                             .onMove(perform: viewModel.moveMod)
                         }
                         .listStyle(.inset)
+                        .focusable(true)
                     }
                     
                     Divider()
