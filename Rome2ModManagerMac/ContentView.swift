@@ -16,6 +16,7 @@ struct ContentView: View {
     @State private var renameText = ""
     @State private var renamingMod: ModItem?
     @State private var renamingModImages: [URL] = []
+    @State private var renamePreviewImages: [NSImage] = []
     @State private var selectedModImages: [URL] = []
     @State private var renameSheetId = UUID()
     
@@ -93,6 +94,7 @@ struct ContentView: View {
                                     renamingMod = mod
                                     renameText = mod.displayName
                                     renamingModImages = viewModel.imagesForMod(mod)
+                                    renamePreviewImages = renamingModImages.compactMap { NSImage(contentsOf: $0) }
                                     showRenameSheet = true
                                 }
                                 .environmentObject(loc)
@@ -197,7 +199,7 @@ struct ContentView: View {
             RenameSheetView(
                 modName: renamingMod?.displayName ?? "",
                 packFileName: renamingMod?.packFileName ?? "",
-                imageURLs: renamingModImages,
+                previewImages: renamePreviewImages,
                 renameText: $renameText,
                 onConfirm: {
                     if let mod = renamingMod {
@@ -266,14 +268,12 @@ struct ContentView: View {
 struct RenameSheetView: View {
     let modName: String
     let packFileName: String
-    let imageURLs: [URL]
+    let previewImages: [NSImage]
     @Binding var renameText: String
     let onConfirm: () -> Void
     let onCancel: () -> Void
     
     @EnvironmentObject var loc: LocalizationManager
-    @State private var previewImage: NSImage?
-    @State private var isLoading = true
     
     var body: some View {
         VStack(spacing: 20) {
@@ -282,24 +282,14 @@ struct RenameSheetView: View {
                 .font(.title2)
                 .fontWeight(.bold)
             
-            // MOD 预览图（取第一张，后台异步加载）
-            if let nsImage = previewImage {
+            // MOD 预览图（直接显示预加载的图片，零时序问题）
+            if let nsImage = previewImages.first {
                 Image(nsImage: nsImage)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(maxWidth: 320, maxHeight: 180)
                     .cornerRadius(8)
                     .shadow(color: .black.opacity(0.1), radius: 6, x: 0, y: 3)
-            } else if isLoading {
-                // 加载中
-                VStack(spacing: 8) {
-                    ProgressView()
-                        .scaleEffect(0.8)
-                    Text(loc.str(.loading))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                .frame(maxWidth: 320, minHeight: 100)
             } else {
                 // 无预览图时显示 MOD 图标占位
                 VStack(spacing: 8) {
@@ -344,27 +334,6 @@ struct RenameSheetView: View {
         }
         .padding(30)
         .frame(width: 420, height: 420)
-        .task {
-            await loadPreviewImage()
-        }
-    }
-    
-    /// 后台异步加载预览图，避免阻塞主线程，解决首次打开图片不显示的问题
-    private func loadPreviewImage() async {
-        guard let url = imageURLs.first else {
-            isLoading = false
-            return
-        }
-        
-        // 在后台线程读取文件数据，避免主线程 I/O 阻塞
-        let imageData = await Task.detached(priority: .userInitiated) {
-            return try? Data(contentsOf: url)
-        }.value
-        
-        if let data = imageData, let img = NSImage(data: data) {
-            previewImage = img
-        }
-        isLoading = false
     }
 }
 
