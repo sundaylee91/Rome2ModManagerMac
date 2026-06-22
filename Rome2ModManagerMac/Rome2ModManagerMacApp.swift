@@ -63,20 +63,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func localizeMainMenu() {
         let loc = LocalizationManager.shared
         
-        // 顶层菜单标题映射
-        let topLevelMap: [String: String] = [
-            loc.str(.file):    "文件",
-            loc.str(.edit):    "编辑",
-            loc.str(.view):    "显示",
-            loc.str(.window):  "窗口",
-            loc.str(.help):    "帮助",
-            // 同时覆盖英文原文（首次启动时可能还是英文）
-            "File":            "文件",
-            "Edit":            "编辑",
-            "View":            "显示",
-            "Window":          "窗口",
-            "Help":            "帮助",
-        ]
+        // 仅在中文环境下执行（提前返回，避免后续字典 key 冲突）
+        guard loc.isChinese else { return }
+        
+        // 顶层菜单标题映射（安全构建，避免字典字面量重复 key 崩溃）
+        var topLevelMap: [String: String] = [:]
+        // 英文原文映射（macOS 系统默认菜单标题）
+        topLevelMap["File"]   = "文件"
+        topLevelMap["Edit"]   = "编辑"
+        topLevelMap["View"]   = "显示"
+        topLevelMap["Window"] = "窗口"
+        topLevelMap["Help"]   = "帮助"
+        // 如果菜单已被中文化，也映射中文标题（防止二次启动时找不到）
+        let cnFile = loc.str(.file)
+        if cnFile != "File" { topLevelMap[cnFile] = "文件" }
+        let cnEdit = loc.str(.edit)
+        if cnEdit != "Edit" { topLevelMap[cnEdit] = "编辑" }
+        let cnView = loc.str(.view)
+        if cnView != "View" { topLevelMap[cnView] = "显示" }
+        let cnWindow = loc.str(.window)
+        if cnWindow != "Window" { topLevelMap[cnWindow] = "窗口" }
+        let cnHelp = loc.str(.help)
+        if cnHelp != "Help" { topLevelMap[cnHelp] = "帮助" }
         
         // 子菜单项映射
         let subMenuMap: [String: String] = [
@@ -144,9 +152,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             "Stop Speaking":             "停止朗读",
         ]
         
-        // 仅在中文环境下执行
-        guard loc.isChinese else { return }
-        
         guard let mainMenu = NSApp.mainMenu else { return }
         
         func localizeMenu(_ menu: NSMenu) {
@@ -184,7 +189,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 localizeMenu(sub)
             }
             
-            // 再更新顶层菜单标题（subMenuMap 中可能已有对应项）
+            // 再更新顶层菜单标题
             if let localized = topLevelMap[title] {
                 item.title = localized
             }
