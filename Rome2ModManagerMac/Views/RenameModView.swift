@@ -5,17 +5,17 @@ import SwiftUI
 struct RenameModView: View {
     let mod: Mod
     let previewImage: NSImage?       // 主界面预热好的缩略图
-    let loc: LocalizationManager      // 显式传入，不依赖 @EnvironmentObject
     let onConfirm: (String) -> Void
     let onCancel: () -> Void
 
     @State private var newName: String = ""
     @FocusState private var isTextFieldFocused: Bool
+    @EnvironmentObject private var loc: LocalizationManager
 
     var body: some View {
         VStack(spacing: 16) {
             // 标题
-            Text(loc.str(.renameMod))
+            Text(loc.t(.renameMod))
                 .font(.headline)
 
             // MOD 缩略图
@@ -35,7 +35,7 @@ struct RenameModView: View {
                             Image(systemName: "photo")
                                 .font(.title2)
                                 .foregroundColor(.secondary)
-                            Text(loc.str(.noPreviewAvailable))
+                            Text(loc.t(.noPreviewAvailable))
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -44,7 +44,7 @@ struct RenameModView: View {
 
             // 当前文件名
             HStack {
-                Text(loc.str(.currentNameLabel))
+                Text(loc.t(.currentNameLabel))
                     .font(.caption)
                     .foregroundColor(.secondary)
                 Text(mod.name)
@@ -54,17 +54,17 @@ struct RenameModView: View {
             }
 
             // 新名称输入框
-            TextField(loc.str(.enterNewFileName), text: $newName)
+            TextField(loc.t(.enterNewFileName), text: $newName)
                 .textFieldStyle(.roundedBorder)
                 .focused($isTextFieldFocused)
                 .onSubmit { confirm() }
 
             // 按钮
             HStack(spacing: 12) {
-                Button(loc.str(.cancel)) { onCancel() }
+                Button(loc.t(.cancel)) { onCancel() }
                     .keyboardShortcut(.escape, modifiers: [])
 
-                Button(loc.str(.confirmRename)) { confirm() }
+                Button(loc.t(.confirmRename)) { confirm() }
                     .keyboardShortcut(.return, modifiers: [])
                     .disabled(newName.trimmingCharacters(in: .whitespaces).isEmpty)
             }
@@ -90,8 +90,8 @@ struct RenameModView: View {
     RenameModView(
         mod: Mod(id: UUID(), name: "test_mod.pack", filePath: "/tmp/test_mod.pack", fileSize: 1024),
         previewImage: nil,
-        loc: LocalizationManager.shared,
         onConfirm: { _ in },
         onCancel: { }
     )
+    .environmentObject(LocalizationManager.shared)
 }
