@@ -62,7 +62,7 @@ enum L10n {
     case moveUp, moveDown, renameMods
     
     // 状态
-    case scanning, noMods, noModsHint
+    case scanning, loading, noMods, noModsHint
     case scriptFound(String), scriptNotFound
     case workshopConnected, workshopNotFound
     case clickModHint, detailHint
@@ -163,6 +163,7 @@ enum L10n {
         case .moveDown: return "下移"
         case .renameMods: return "规范化名称"
         case .scanning: return "正在扫描..."
+        case .loading: return "加载中..."
         case .noMods: return "暂无 MOD"
         case .noModsHint: return "点击「扫描」或按 ⌘R 加载 MOD 列表"
         case .scriptFound(let p): return "脚本: \(p)"
@@ -287,6 +288,7 @@ enum L10n {
         case .moveDown: return "Move Down"
         case .renameMods: return "Normalize Names"
         case .scanning: return "Scanning..."
+        case .loading: return "Loading..."
         case .noMods: return "No MODs"
         case .noModsHint: return "Click Scan or press ⌘R to load MOD list"
         case .scriptFound(let p): return "Script: \(p)"
