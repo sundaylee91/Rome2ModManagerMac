@@ -50,6 +50,7 @@ struct Rome2ModManagerMacApp: App {
 /// 管理自定义关于窗口（居中显示）
 final class AboutWindowController: NSObject {
     private static var window: NSWindow?
+    private static var closeObserver: NSObjectProtocol?
 
     static func show() {
         // 如果已存在，直接前置
@@ -71,6 +72,24 @@ final class AboutWindowController: NSObject {
         w.setFrame(NSRect(x: 0, y: 0, width: 420, height: 430), display: false)
         w.center()
         w.makeKeyAndOrderFront(nil)
+
+        // 清理旧观察者
+        if let obs = closeObserver {
+            NotificationCenter.default.removeObserver(obs)
+        }
+
+        // 窗口关闭时释放静态引用，避免 NSWindow 内存泄漏
+        closeObserver = NotificationCenter.default.addObserver(
+            forName: NSWindow.willCloseNotification,
+            object: w,
+            queue: .main
+        ) { _ in
+            window = nil
+            if let obs = closeObserver {
+                NotificationCenter.default.removeObserver(obs)
+                closeObserver = nil
+            }
+        }
 
         window = w
     }

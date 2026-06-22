@@ -207,21 +207,43 @@ struct ContentView: View {
                 selectedModImages = []
             }
         }
-        // 清掉上一个 mod 的预览图引用（选中新 mod 时旧图不再有效）
-        .onChange(of: viewModel.selectedModId) { _ in
-            // 不清空 modPreviewImage，让已加载的图保留便于重命名复用
-        }
-        // 📸 扫描完成后，后台并发预加载所有 MOD 缩略图（TaskGroup 并行）
+        // 📸 扫描完成后：后台预加载所有缩略图 + 静默预热 modPreviewImage
         .onChange(of: viewModel.mods.count) { newCount in
             guard newCount > 0 else { return }
             let mods = viewModel.mods
 
+            // 清理旧扫描产生的失效缓存
+            modPreviewImage.removeAll()
+
             Task {
                 var allUrls: [URL] = []
+                var firstUrls: [(UUID, URL)] = []
+
                 for mod in mods {
-                    allUrls.append(contentsOf: viewModel.imagesForMod(mod))
+                    let urls = viewModel.imagesForMod(mod)
+                    allUrls.append(contentsOf: urls)
+                    if let first = urls.first {
+                        firstUrls.append((mod.id, first))
+                    }
                 }
+
+                // TaskGroup 并行预加载所有缩略图到缓存
                 await ImageThumbnailCache.shared.preloadAll(urls: allUrls, maxSize: 320)
+
+                // 🆕 静默预热：从缓存取每 MOD 第一张图 → modPreviewImage
+                // 效果等同于「后台模拟点击重命名」，用户点重命名时零等待
+                var images: [(UUID, NSImage)] = []
+                for (modId, url) in firstUrls {
+                    if let image = ImageThumbnailCache.shared.cachedThumbnail(for: url) {
+                        images.append((modId, image))
+                    }
+                }
+
+                await MainActor.run {
+                    for (modId, image) in images {
+                        modPreviewImage[modId] = image
+                    }
+                }
             }
         }
         .sheet(isPresented: $showSettings) {
