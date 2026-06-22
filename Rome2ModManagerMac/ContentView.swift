@@ -109,7 +109,11 @@ struct ContentView: View {
                                                 ?? ImageThumbnailCache.shared.generateAndCache(for: $0, maxSize: 320)
                                         }
                                     }
-                                    showRenameSheet = true
+                                    // 🔧 延迟一个 RunLoop 弹出 sheet，确保 @State 已全部提交
+                                    //    修复「首次点击重命名不显示图片」的 SwiftUI 时序 bug
+                                    DispatchQueue.main.async {
+                                        showRenameSheet = true
+                                    }
                                 }
                                 .environmentObject(loc)
                             }
