@@ -9,7 +9,7 @@ import Foundation
 
 struct AppInfo {
     /// 应用名称
-    static let appName = "Rome II Mod Manager"
+    static let appName = "Rome2 Mod Manager Mac"
 
     /// 作者名称（在关于窗口中显示）
     static let author = "Sunday Lee"
@@ -24,5 +24,5 @@ struct AppInfo {
     static let copyright = "Copyright © 2026 Sunday Lee. All rights reserved."
 
     /// 应用简介
-    static let description = "Total War: Rome II 模组管理器\n快速扫描、管理并生成用户脚本。"
+    static let description = "Mac上的 Total War: Rome 2 模组管理器\n识别并管理排序模组。"
 }
