@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import AppKit
 
 /// 负责扫描 Workshop MOD 和读写 user.script.txt 的文件管理服务
 class ModFileManager {
