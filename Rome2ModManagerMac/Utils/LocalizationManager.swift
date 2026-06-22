@@ -55,7 +55,7 @@ enum L10n {
     case appName
     case scanMods, writeScript, settings, diagnostics, refresh
     case enableAll, disableAll, launchGame
-    case file, edit, view, help
+    case file, edit, view, help, window
     
     // 按钮/标签
     case choose, browse, save, cancel, confirm, close, reset, rename, pencil
@@ -149,6 +149,7 @@ enum L10n {
         case .edit: return "编辑"
         case .view: return "显示"
         case .help: return "帮助"
+        case .window: return "窗口"
         case .choose: return "选择"
         case .browse: return "浏览..."
         case .save: return "保存"
@@ -272,6 +273,7 @@ enum L10n {
         case .edit: return "Edit"
         case .view: return "View"
         case .help: return "Help"
+        case .window: return "Window"
         case .choose: return "Choose"
         case .browse: return "Browse..."
         case .save: return "Save"

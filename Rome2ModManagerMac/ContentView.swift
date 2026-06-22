@@ -12,9 +12,10 @@ struct ContentView: View {
     @EnvironmentObject var viewModel: ModListViewModel
     @EnvironmentObject var loc: LocalizationManager
     @State private var showSettings = false
-    @State private var showRenameAlert = false
+    @State private var showRenameSheet = false
     @State private var renameText = ""
     @State private var renamingMod: ModItem?
+    @State private var renamingModImages: [URL] = []
     @State private var selectedModImages: [URL] = []
     
     var body: some View {
@@ -89,7 +90,8 @@ struct ContentView: View {
                                 ) {
                                     renamingMod = mod
                                     renameText = mod.displayName
-                                    showRenameAlert = true
+                                    renamingModImages = viewModel.imagesForMod(mod)
+                                    showRenameSheet = true
                                 }
                                 .environmentObject(loc)
                             }
@@ -189,16 +191,21 @@ struct ContentView: View {
                 .environmentObject(viewModel)
                 .environmentObject(loc)
         }
-        .alert(loc.str(.renameTitle), isPresented: $showRenameAlert) {
-            TextField(loc.str(.renamePlaceholder), text: $renameText)
-            Button(loc.str(.confirm)) {
-                if let mod = renamingMod {
-                    viewModel.renameMod(mod, newName: renameText)
-                }
-            }
-            Button(loc.str(.cancel), role: .cancel) {}
-        } message: {
-            Text(loc.str(.renamePrompt))
+        .sheet(isPresented: $showRenameSheet) {
+            RenameSheetView(
+                modName: renamingMod?.displayName ?? "",
+                packFileName: renamingMod?.packFileName ?? "",
+                imageURLs: renamingModImages,
+                renameText: $renameText,
+                onConfirm: {
+                    if let mod = renamingMod {
+                        viewModel.renameMod(mod, newName: renameText)
+                    }
+                    showRenameSheet = false
+                },
+                onCancel: { showRenameSheet = false }
+            )
+            .environmentObject(loc)
         }
     }
     
@@ -248,6 +255,81 @@ struct ContentView: View {
         
         // 全部失败
         viewModel.showToast(loc.str(.gamePathInvalid), type: .error)
+    }
+}
+
+// MARK: - 重命名弹窗（自定义 Sheet，带 MOD 预览图）
+
+struct RenameSheetView: View {
+    let modName: String
+    let packFileName: String
+    let imageURLs: [URL]
+    @Binding var renameText: String
+    let onConfirm: () -> Void
+    let onCancel: () -> Void
+    
+    @EnvironmentObject var loc: LocalizationManager
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            // 标题
+            Text(loc.str(.renameTitle))
+                .font(.title2)
+                .fontWeight(.bold)
+            
+            // MOD 预览图（取第一张）
+            if let firstImage = imageURLs.first,
+               let nsImage = NSImage(contentsOf: firstImage) {
+                Image(nsImage: nsImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(maxWidth: 320, maxHeight: 180)
+                    .cornerRadius(8)
+                    .shadow(color: .black.opacity(0.1), radius: 6, x: 0, y: 3)
+            } else {
+                // 无预览图时显示 MOD 图标占位
+                VStack(spacing: 8) {
+                    Image(systemName: "doc.text.fill")
+                        .font(.system(size: 48))
+                        .foregroundColor(.secondary.opacity(0.5))
+                    Text(packFileName)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+                .frame(maxWidth: 320, minHeight: 100)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color(NSColor.controlBackgroundColor).opacity(0.5))
+                )
+            }
+            
+            // 提示文字
+            Text(loc.str(.renamePrompt))
+                .font(.callout)
+                .foregroundColor(.secondary)
+            
+            // 输入框
+            TextField(loc.str(.renamePlaceholder), text: $renameText)
+                .textFieldStyle(.roundedBorder)
+                .frame(width: 300)
+                .onSubmit {
+                    onConfirm()
+                }
+            
+            // 按钮
+            HStack(spacing: 16) {
+                Button(loc.str(.cancel), action: onCancel)
+                    .keyboardShortcut(.escape)
+                
+                Button(loc.str(.confirm), action: onConfirm)
+                    .keyboardShortcut(.return)
+                    .buttonStyle(.borderedProminent)
+                    .disabled(renameText.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+        }
+        .padding(30)
+        .frame(width: 420, height: 420)
     }
 }
 
