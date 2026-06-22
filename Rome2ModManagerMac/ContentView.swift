@@ -242,6 +242,13 @@ struct ContentView: View {
     /// 2. Steam URL scheme (steam://run/214950)
     /// 3. 自动检测 Steam 安装目录
     func launchGame() {
+        // 自动写入脚本（防止用户忘记点击「写入脚本」）
+        if viewModel.writeUserScriptSilently() {
+            viewModel.showToast(loc.str(.autoSavedAndLaunch(viewModel.enabledCount)), type: .success)
+        } else {
+            return  // 写入失败，阻止启动（错误提示已在 writeUserScriptSilently 中显示）
+        }
+        
         // 1. 用户自定义路径
         if let customPath = AppSettings.shared.customGamePath, !customPath.isEmpty {
             if FileManager.default.fileExists(atPath: customPath) {

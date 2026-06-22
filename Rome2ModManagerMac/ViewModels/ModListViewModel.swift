@@ -202,18 +202,27 @@ final class ModListViewModel: ObservableObject {
         }
     }
     
+    /// 写入脚本并显示成功/失败 Toast
     func writeUserScript() {
+        if writeUserScriptSilently() {
+            showToast(loc.str(.scriptWritten(enabledCount)), type: .success)
+        }
+        // 失败时 writeUserScriptSilently 已显示错误 Toast
+    }
+    
+    /// 静默写入脚本（仅显示错误 Toast），返回是否成功
+    /// 用于「启动游戏」等需要自动保存后继续操作的场景
+    func writeUserScriptSilently() -> Bool {
         guard !mods.isEmpty else {
             errorMessage = loc.str(.noModsToSave)
             showToast(loc.str(.noModsToSave), type: .error)
-            return
+            return false
         }
         
         let existingContent = fileManager.readUserScript()
         
         do {
             try fileManager.writeUserScript(mods: mods, preserving: existingContent)
-            let count = enabledCount
             errorMessage = nil
             
             // 同步到 Rome 2 官方启动器的 Preferences Data（尽力而为，不影响主流程）
@@ -223,10 +232,11 @@ final class ModListViewModel: ObservableObject {
                 print("⚠️ 同步 Preferences Data 失败: \(error.localizedDescription)")
             }
             
-            showToast(loc.str(.scriptWritten(count)), type: .success)
+            return true
         } catch {
             errorMessage = loc.str(.scriptWriteFailed(error.localizedDescription))
             showToast(loc.str(.scriptWriteFailed(error.localizedDescription)), type: .error)
+            return false
         }
     }
     

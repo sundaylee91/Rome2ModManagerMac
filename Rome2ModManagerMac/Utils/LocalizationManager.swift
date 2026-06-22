@@ -131,6 +131,9 @@ enum L10n {
     // 游戏路径（新增）
     case gamePath, gamePathPrompt, launchHelp, gamePathSet(String)
     
+    // 自动保存
+    case autoSavedAndLaunch(Int)
+    
     var zh: String {
         switch self {
         case .appName: return "Rome 2 Mod 管理器"
@@ -250,6 +253,7 @@ enum L10n {
         case .gamePathPrompt: return "留空则通过 Steam 启动，或选择 Rome2 .app"
         case .launchHelp: return "启动 Rome 2 Total War"
         case .gamePathSet(let p): return "已设置游戏路径: \(p)"
+        case .autoSavedAndLaunch(let n): return "MOD 配置已自动保存（\(n) 个），正在启动游戏..."
         }
     }
     
@@ -372,6 +376,7 @@ enum L10n {
         case .gamePathPrompt: return "Leave blank to launch via Steam, or select Rome2 .app"
         case .launchHelp: return "Launch Rome 2 Total War"
         case .gamePathSet(let p): return "Game path set: \(p)"
+        case .autoSavedAndLaunch(let n): return "Auto-saved \(n) MOD(s), launching game..."
         }
     }
 }
