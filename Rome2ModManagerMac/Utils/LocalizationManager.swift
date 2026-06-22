@@ -37,8 +37,14 @@ final class LocalizationManager: ObservableObject {
         return pref.hasPrefix("en") ? "en" : "zh"
     }
     
+    /// 根据当前语言返回本地化字符串
     func str(_ key: L10n) -> String {
         isChinese ? key.zh : key.en
+    }
+    
+    /// str 的简写别名，方便 SwiftUI 中调用
+    func t(_ key: L10n) -> String {
+        str(key)
     }
 }
 

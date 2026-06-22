@@ -20,6 +20,7 @@ struct ModDetailView: View {
                 RenameModView(
                     mod: mod,
                     previewImage: viewModel.modPreviewImage[mod.id],
+                    loc: loc,
                     onConfirm: { newBaseName in
                         viewModel.commitRename(newName: newBaseName)
                     },
@@ -27,7 +28,6 @@ struct ModDetailView: View {
                         viewModel.cancelRename()
                     }
                 )
-                .environmentObject(loc)
             }
         }
         .onChange(of: viewModel.showRenameSheet) { newValue in
@@ -77,7 +77,7 @@ struct ModDetailView: View {
         HStack(spacing: 6) {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(.secondary)
-            TextField(loc.t(.searchModsPlaceholder), text: $viewModel.searchText)
+            TextField(loc.str(.searchModsPlaceholder), text: $viewModel.searchText)
                 .textFieldStyle(.plain)
                 .font(.system(size: 13))
             if !viewModel.searchText.isEmpty {
@@ -103,11 +103,11 @@ struct ModDetailView: View {
                 Image(systemName: "tray")
                     .font(.system(size: 28))
                     .foregroundColor(.secondary)
-                Text(loc.t(.noModsLoaded))
+                Text(loc.str(.noModsLoaded))
                     .foregroundColor(.secondary)
                     .font(.callout)
             } else {
-                Text(loc.t(.noModsMatchSearch))
+                Text(loc.str(.noModsMatchSearch))
                     .foregroundColor(.secondary)
                     .font(.callout)
             }
@@ -143,7 +143,7 @@ struct ModDetailView: View {
 
     private var enabledCountBar: some View {
         HStack {
-            Text(String(format: loc.t(.enabledCountFormat), viewModel.enabledModCount, viewModel.filteredMods.count))
+            Text(String(format: loc.str(.enabledCountFormat), viewModel.enabledModCount, viewModel.filteredMods.count))
                 .font(.caption)
                 .foregroundColor(.secondary)
             Spacer()
@@ -160,7 +160,7 @@ struct ModDetailView: View {
             Button {
                 viewModel.showInFinder(mod: mod)
             } label: {
-                Text(loc.t(.showInFinder))
+                Text(loc.str(.showInFinder))
             }
 
             Divider()
@@ -168,7 +168,7 @@ struct ModDetailView: View {
             Button {
                 viewModel.renameMod(mod)
             } label: {
-                Text(loc.t(.rename))
+                Text(loc.str(.rename))
             }
         }
     }
@@ -193,7 +193,7 @@ struct ModDetailView: View {
             Image(systemName: "square.grid.3x3.topleft.filled")
                 .font(.system(size: 36))
                 .foregroundColor(.secondary.opacity(0.6))
-            Text(loc.t(.selectModHint))
+            Text(loc.str(.selectModHint))
                 .foregroundColor(.secondary)
                 .font(.body)
         }
@@ -217,7 +217,7 @@ struct ModDetailView: View {
                     get: { viewModel.modEnabledState[mod.id] ?? true },
                     set: { viewModel.toggleMod(id: mod.id, enabled: $0) }
                 )) {
-                    Text(loc.t(.enableMod))
+                    Text(loc.str(.enableMod))
                         .font(.subheadline)
                 }
 
@@ -277,17 +277,17 @@ struct ModDetailView: View {
     private func infoGrid(for mod: Mod) -> some View {
         Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
             GridRow {
-                Text(loc.t(.fileSizeLabel))
+                Text(loc.str(.fileSizeLabel))
                     .foregroundColor(.secondary)
                 Text(ByteCountFormatter.string(fromByteCount: mod.fileSize, countStyle: .file))
             }
             GridRow {
-                Text(loc.t(.modTypeLabel))
+                Text(loc.str(.modTypeLabel))
                     .foregroundColor(.secondary)
-                Text(mod.filePath.lowercased().hasSuffix(".pack") ? "PACK" : loc.t(.unknown))
+                Text(mod.filePath.lowercased().hasSuffix(".pack") ? "PACK" : loc.str(.unknown))
             }
             GridRow {
-                Text(loc.t(.lastModifiedLabel))
+                Text(loc.str(.lastModifiedLabel))
                     .foregroundColor(.secondary)
                 Text(mod.lastModified.formatted(date: .abbreviated, time: .shortened))
             }
