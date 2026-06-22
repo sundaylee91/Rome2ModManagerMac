@@ -105,7 +105,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             "Customize Toolbar…":        "自定义工具栏…",
             "Show Sidebar":              "显示侧边栏",
             "Hide Sidebar":              "隐藏侧边栏",
-            "Enter Full Screen":         "进入全屏",
             "Show Help Topics":          "显示帮助主题",
             "Rome2ModManagerMac Help":   "Rome 2 Mod 管理器 帮助",
             "Undo":                      "撤销",
