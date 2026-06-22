@@ -6,6 +6,7 @@
 import Foundation
 import Combine
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// MOD 列表的视图模型，管理状态与操作
 final class ModListViewModel: ObservableObject {
