@@ -170,9 +170,14 @@ final class ModListViewModel: ObservableObject {
                 self.mods = foundMods
                 self.isScanning = false
                 
-                // 清除旧选择
-                self.selectedModId = nil
-                self.selectedModImages = []
+                // 扫描完成后自动选中第一个 MOD（让右侧面板立即有内容，窗口形态正常）
+                if let firstMod = foundMods.first {
+                    self.selectedModId = firstMod.id
+                    self.selectedModImages = self.fileManager.findImagesInModFolder(relativePath: firstMod.workshopSubfolder)
+                } else {
+                    self.selectedModId = nil
+                    self.selectedModImages = []
+                }
                 
                 if foundMods.isEmpty {
                     if !self.workshopExists {
