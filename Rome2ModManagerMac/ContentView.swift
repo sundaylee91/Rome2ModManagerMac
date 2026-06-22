@@ -10,6 +10,7 @@ import UniformTypeIdentifiers
 
 struct ContentView: View {
     @EnvironmentObject var viewModel: ModListViewModel
+    @EnvironmentObject var loc: LocalizationManager
     @State private var showDiagnostics = false
     @State private var showSettings = false
     @State private var showRenameAlert = false
@@ -25,28 +26,28 @@ struct ContentView: View {
                     // 工具栏
                     HStack {
                         Button(action: { viewModel.scanMods() }) {
-                            Label("扫描", systemImage: "arrow.triangle.2.circlepath")
+                            Label(loc.str(.scanMods), systemImage: "arrow.triangle.2.circlepath")
                         }
-                        .help("扫描 Workshop MOD 文件夹 (⌘R)")
+                        .help(loc.str(.scanHelp))
                         
                         Button(action: { viewModel.writeUserScript() }) {
-                            Label("写入", systemImage: "square.and.arrow.down")
+                            Label(loc.str(.writeScript), systemImage: "square.and.arrow.down")
                         }
-                        .help("写入 user.script.txt (⌘S)")
+                        .help(loc.str(.writeHelp))
                         .disabled(viewModel.mods.isEmpty)
                         
                         Divider()
                             .frame(height: 20)
                         
                         Button(action: { showSettings = true }) {
-                            Label("设置", systemImage: "gearshape")
+                            Label(loc.str(.settings), systemImage: "gearshape")
                         }
-                        .help("设置路径")
+                        .help(loc.str(.settingsHelp))
                         
                         Button(action: { showDiagnostics = true }) {
-                            Label("诊断", systemImage: "magnifyingglass")
+                            Label(loc.str(.diagnostics), systemImage: "magnifyingglass")
                         }
-                        .help("路径诊断")
+                        .help(loc.str(.diagnosticsHelp))
                         
                         Spacer()
                         
@@ -56,7 +57,7 @@ struct ContentView: View {
                                 .frame(width: 20, height: 20)
                         }
                         
-                        Text("\(viewModel.mods.count) 个 MOD")
+                        Text(loc.str(.modCount(viewModel.mods.count)))
                             .foregroundColor(.secondary)
                             .font(.caption)
                     }
@@ -72,10 +73,10 @@ struct ContentView: View {
                             Image(systemName: "tray")
                                 .font(.system(size: 40))
                                 .foregroundColor(.secondary)
-                            Text("暂无 MOD")
+                            Text(loc.str(.noMods))
                                 .font(.title3)
                                 .foregroundColor(.secondary)
-                            Text("点击「扫描」或按 ⌘R 加载 MOD 列表")
+                            Text(loc.str(.noModsHint))
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                             
@@ -103,10 +104,10 @@ struct ContentView: View {
                                 .onTapGesture {
                                     viewModel.selectMod(mod.id)
                                 }
+                                .environmentObject(loc)
                             }
                             .onMove { source, destination in
                                 viewModel.mods.move(fromOffsets: source, toOffset: destination)
-                                // 拖拽后同步 loadOrder 到新的列表位置
                                 viewModel.updateLoadOrder()
                             }
                         }
@@ -121,7 +122,7 @@ struct ContentView: View {
                             Image(systemName: "checkmark.circle.fill")
                                 .foregroundColor(.green)
                                 .font(.caption)
-                            Text("脚本: \(scriptPath)")
+                            Text(loc.str(.scriptFound(scriptPath)))
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                                 .lineLimit(1)
@@ -130,7 +131,7 @@ struct ContentView: View {
                             Image(systemName: "xmark.circle.fill")
                                 .foregroundColor(.orange)
                                 .font(.caption)
-                            Text("未找到 user.script.txt")
+                            Text(loc.str(.scriptNotFound))
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -140,7 +141,7 @@ struct ContentView: View {
                         Circle()
                             .fill(viewModel.workshopExists ? Color.green : Color.red)
                             .frame(width: 8, height: 8)
-                        Text(viewModel.workshopExists ? "Workshop 已连接" : "Workshop 未找到")
+                        Text(viewModel.workshopExists ? loc.str(.workshopConnected) : loc.str(.workshopNotFound))
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -157,16 +158,17 @@ struct ContentView: View {
                         mod: selectedMod,
                         imageUrls: viewModel.selectedModImages
                     )
+                    .environmentObject(loc)
                     .frame(minWidth: 200, idealWidth: 320)
                 } else {
                     VStack(spacing: 12) {
                         Image(systemName: "info.circle")
                             .font(.system(size: 36))
                             .foregroundColor(.secondary)
-                        Text("点击左侧 MOD 查看详情")
+                        Text(loc.str(.clickModHint))
                             .font(.body)
                             .foregroundColor(.secondary)
-                        Text("详情包括 MOD 信息和预览图片")
+                        Text(loc.str(.detailHint))
                             .font(.caption)
                             .foregroundColor(.secondary.opacity(0.7))
                     }
@@ -191,7 +193,6 @@ struct ContentView: View {
             viewModel.scanMods()
         }
         .onChange(of: viewModel.selectedModId) { newId in
-            // 当选中变化时同步图片（ViewModel 已在 selectMod 中处理）
             if let id = newId, let mod = viewModel.mods.first(where: { $0.id == id }) {
                 selectedModImages = viewModel.imagesForMod(mod)
             } else {
@@ -201,21 +202,23 @@ struct ContentView: View {
         .sheet(isPresented: $showDiagnostics) {
             DiagnosticsView()
                 .environmentObject(viewModel)
+                .environmentObject(loc)
         }
         .sheet(isPresented: $showSettings) {
             SettingsView()
                 .environmentObject(viewModel)
+                .environmentObject(loc)
         }
-        .alert("重命名", isPresented: $showRenameAlert) {
-            TextField("新名称", text: $renameText)
-            Button("确定") {
+        .alert(loc.str(.renameTitle), isPresented: $showRenameAlert) {
+            TextField(loc.str(.renamePlaceholder), text: $renameText)
+            Button(loc.str(.confirm)) {
                 if let mod = renamingMod {
                     viewModel.renameMod(mod, newName: renameText)
                 }
             }
-            Button("取消", role: .cancel) {}
+            Button(loc.str(.cancel), role: .cancel) {}
         } message: {
-            Text("输入 MOD 的新显示名称")
+            Text(loc.str(.renamePrompt))
         }
     }
 }
@@ -269,22 +272,20 @@ struct ModRowView: View {
     @Binding var mod: ModItem
     var isSelected: Bool
     var onRename: () -> Void
+    @EnvironmentObject var loc: LocalizationManager
     
     var body: some View {
         HStack(spacing: 10) {
-            // 启用开关
             Toggle("", isOn: $mod.isEnabled)
                 .toggleStyle(.switch)
                 .controlSize(.small)
                 .labelsHidden()
             
-            // MOD 图标
             Image(systemName: "doc.text")
                 .font(.title3)
                 .foregroundColor(mod.isEnabled ? .accentColor : .secondary)
                 .frame(width: 24)
             
-            // MOD 名称
             VStack(alignment: .leading, spacing: 2) {
                 Text(mod.displayName)
                     .font(.body)
@@ -299,14 +300,13 @@ struct ModRowView: View {
             
             Spacer()
             
-            // 重命名按钮
             Button(action: onRename) {
                 Image(systemName: "pencil")
                     .font(.caption)
             }
             .buttonStyle(.borderless)
             .opacity(isSelected ? 1 : 0.4)
-            .help("重命名")
+            .help(loc.str(.renameHelp))
         }
         .padding(.vertical, 4)
         .padding(.horizontal, 6)
@@ -323,6 +323,7 @@ struct ModRowView: View {
 struct ModDetailView: View {
     let mod: ModItem
     let imageUrls: [URL]
+    @EnvironmentObject var loc: LocalizationManager
     
     @State private var fullImageUrl: URL?
     @State private var showFullImage = false
@@ -330,7 +331,6 @@ struct ModDetailView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                // 标题
                 Text(mod.displayName)
                     .font(.title3)
                     .fontWeight(.bold)
@@ -338,29 +338,24 @@ struct ModDetailView: View {
                 
                 Divider()
                 
-                // 基本信息
                 Group {
-                    DetailRow(label: "文件名", value: mod.packFileName)
-                    DetailRow(label: "状态", value: mod.isEnabled ? "✓ 启用" : "✗ 禁用")
-                    DetailRow(label: "加载顺序", value: "第 \(mod.loadOrder + 1) 位")
+                    DetailRow(label: loc.str(.fileName), value: mod.packFileName)
+                    DetailRow(label: loc.str(.status), value: mod.isEnabled ? loc.str(.enabled) : loc.str(.disabled))
+                    DetailRow(label: loc.str(.loadOrder), value: loc.str(.loadOrderLabel(mod.loadOrder + 1)))
                     
                     if !mod.workshopSubfolder.isEmpty {
-                        DetailRow(label: "所在文件夹", value: mod.workshopSubfolder)
+                        DetailRow(label: loc.str(.folder), value: mod.workshopSubfolder)
                     }
                 }
                 
-                // 预览图片
                 if !imageUrls.isEmpty {
                     Divider()
                     
                     HStack {
                         Image(systemName: "photo.on.rectangle")
                             .foregroundColor(.accentColor)
-                        Text("预览图片")
+                        Text(loc.str(.previewImages(imageUrls.count)))
                             .font(.headline)
-                        Text("(\(imageUrls.count))")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
                     }
                     
                     LazyVStack(spacing: 10) {
@@ -377,12 +372,12 @@ struct ModDetailView: View {
                                             fullImageUrl = url
                                             showFullImage = true
                                         }
-                                        .help("点击查看大图")
+                                        .help(loc.str(.clickToEnlarge))
                                 } else {
                                     HStack {
                                         Image(systemName: "photo.badge.exclamationmark")
                                             .foregroundColor(.orange)
-                                        Text("无法加载")
+                                        Text(loc.str(.cannotLoad))
                                             .font(.caption)
                                             .foregroundColor(.secondary)
                                     }
@@ -406,7 +401,7 @@ struct ModDetailView: View {
                         Image(systemName: "photo.on.rectangle")
                             .foregroundColor(.secondary)
                             .font(.caption)
-                        Text("该 MOD 文件夹中没有预览图片")
+                        Text(loc.str(.noPreviewImages))
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -414,12 +409,11 @@ struct ModDetailView: View {
                 
                 Divider()
                 
-                // 加载顺序说明
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("MOD 加载顺序说明")
+                    Text(loc.str(.loadOrderInfo))
                         .font(.subheadline)
                         .fontWeight(.medium)
-                    Text("列表中的 MOD 按从上到下的顺序加载。拖拽行可调整加载顺序。")
+                    Text(loc.str(.loadOrderDesc))
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -431,6 +425,7 @@ struct ModDetailView: View {
         .sheet(isPresented: $showFullImage) {
             if let url = fullImageUrl {
                 FullImageView(imageUrl: url)
+                    .environmentObject(loc)
             }
         }
     }
@@ -441,6 +436,7 @@ struct ModDetailView: View {
 struct FullImageView: View {
     let imageUrl: URL
     @Environment(\.dismiss) var dismiss
+    @EnvironmentObject var loc: LocalizationManager
     
     var body: some View {
         VStack(spacing: 0) {
@@ -448,7 +444,7 @@ struct FullImageView: View {
                 Text(imageUrl.lastPathComponent)
                     .font(.headline)
                 Spacer()
-                Button("关闭") {
+                Button(loc.str(.close)) {
                     dismiss()
                 }
                 .keyboardShortcut(.return)
@@ -470,7 +466,7 @@ struct FullImageView: View {
                     Image(systemName: "photo.badge.exclamationmark")
                         .font(.system(size: 48))
                         .foregroundColor(.secondary)
-                    Text("无法加载图片")
+                    Text(loc.str(.cannotLoadImage))
                         .foregroundColor(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -502,6 +498,7 @@ struct DetailRow: View {
 
 struct SettingsView: View {
     @EnvironmentObject var viewModel: ModListViewModel
+    @EnvironmentObject var loc: LocalizationManager
     @Environment(\.dismiss) var dismiss
     
     @State private var workshopPathText: String = ""
@@ -509,42 +506,61 @@ struct SettingsView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("路径设置")
+            Text(loc.str(.settingsTitle))
                 .font(.title2)
                 .fontWeight(.bold)
             
-            Text("如果默认路径不正确，可以在这里自定义 Workshop 目录和 user.script.txt 文件的位置。留空则使用默认路径。")
+            Text(loc.str(.pathSettingsDesc))
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             
             Divider()
             
+            // 界面语言
+            VStack(alignment: .leading, spacing: 6) {
+                Text(loc.str(.language))
+                    .font(.headline)
+                
+                Picker("", selection: Binding(
+                    get: { loc.appLanguage },
+                    set: { loc.appLanguage = $0 }
+                )) {
+                    Text(loc.str(.languageAuto)).tag("auto")
+                    Text(loc.str(.languageChinese)).tag("zh")
+                    Text(loc.str(.languageEnglish)).tag("en")
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 330)
+            }
+            
+            Divider()
+            
             // Workshop 路径
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
-                    Text("Workshop 目录")
+                    Text(loc.str(.workshopDir))
                         .font(.headline)
                     if viewModel.isUsingCustomWorkshopPath {
-                        Text("(自定义)")
+                        Text("(\(loc.str(.custom)))")
                             .font(.caption)
                             .foregroundColor(.orange)
                     } else {
-                        Text("(默认)")
+                        Text("(\(loc.str(.default)))")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
                 }
                 
                 HStack(spacing: 8) {
-                    TextField("输入 Workshop 路径或点击「浏览」选择...", text: $workshopPathText)
+                    TextField(loc.str(.workshopDirPrompt), text: $workshopPathText)
                         .textFieldStyle(.roundedBorder)
                         .font(.caption)
                         .onChange(of: workshopPathText) { newValue in
                             viewModel.customWorkshopPath = newValue
                         }
                     
-                    Button("浏览") {
+                    Button(loc.str(.browse)) {
                         viewModel.selectWorkshopPath()
                     }
                     .buttonStyle(.bordered)
@@ -555,7 +571,7 @@ struct SettingsView: View {
                     Image(systemName: viewModel.workshopExists ? "checkmark.circle.fill" : "xmark.circle.fill")
                         .foregroundColor(viewModel.workshopExists ? .green : .red)
                         .font(.caption)
-                    Text(viewModel.workshopExists ? "目录存在" : "目录不存在")
+                    Text(viewModel.workshopExists ? loc.str(.dirExists) : loc.str(.dirNotExists))
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -564,28 +580,28 @@ struct SettingsView: View {
             // user.script.txt 路径
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
-                    Text("user.script.txt")
+                    Text(loc.str(.userScriptLabel))
                         .font(.headline)
                     if viewModel.isUsingCustomUserScriptPath {
-                        Text("(自定义)")
+                        Text("(\(loc.str(.custom)))")
                             .font(.caption)
                             .foregroundColor(.orange)
                     } else {
-                        Text("(默认)")
+                        Text("(\(loc.str(.default)))")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
                 }
                 
                 HStack(spacing: 8) {
-                    TextField("输入 user.script.txt 路径或点击「浏览」选择...", text: $userScriptPathText)
+                    TextField(loc.str(.userScriptPrompt), text: $userScriptPathText)
                         .textFieldStyle(.roundedBorder)
                         .font(.caption)
                         .onChange(of: userScriptPathText) { newValue in
                             viewModel.customUserScriptPath = newValue
                         }
                     
-                    Button("浏览") {
+                    Button(loc.str(.browse)) {
                         viewModel.selectUserScriptPath()
                     }
                     .buttonStyle(.bordered)
@@ -597,7 +613,7 @@ struct SettingsView: View {
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundColor(.green)
                             .font(.caption)
-                        Text("文件存在")
+                        Text(loc.str(.fileExists))
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -606,7 +622,7 @@ struct SettingsView: View {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundColor(.orange)
                             .font(.caption)
-                        Text("文件不存在（写入时会自动创建）")
+                        Text(loc.str(.fileNotExists))
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -615,9 +631,9 @@ struct SettingsView: View {
             
             Divider()
             
-            // 重置按钮
+            // 按钮
             HStack {
-                Button("恢复默认路径") {
+                Button(loc.str(.resetDefaults)) {
                     viewModel.resetPathsToDefault()
                     workshopPathText = ""
                     userScriptPathText = ""
@@ -626,7 +642,7 @@ struct SettingsView: View {
                 
                 Spacer()
                 
-                Button("关闭") {
+                Button(loc.str(.close)) {
                     dismiss()
                 }
                 .keyboardShortcut(.return)
@@ -634,7 +650,7 @@ struct SettingsView: View {
             }
         }
         .padding()
-        .frame(width: 520, height: 420)
+        .frame(width: 520, height: 500)
         .onAppear {
             workshopPathText = viewModel.customWorkshopPath
             userScriptPathText = viewModel.customUserScriptPath
@@ -646,37 +662,38 @@ struct SettingsView: View {
 
 struct DiagnosticsView: View {
     @EnvironmentObject var viewModel: ModListViewModel
+    @EnvironmentObject var loc: LocalizationManager
     @Environment(\.dismiss) var dismiss
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("路径诊断")
+            Text(loc.str(.diagnosticsTitle))
                 .font(.title2)
                 .fontWeight(.bold)
             
             Group {
                 DiagnosticRow(
-                    label: "Workshop 路径",
-                    value: viewModel.workshopPath?.path ?? "未设置",
+                    label: loc.str(.workshopPath),
+                    value: viewModel.workshopPath?.path ?? loc.str(.notSet),
                     exists: viewModel.workshopExists
                 )
                 
                 DiagnosticRow(
-                    label: "user.script.txt 路径",
-                    value: viewModel.userScriptPath ?? "未找到",
+                    label: loc.str(.userScriptPath),
+                    value: viewModel.userScriptPath ?? loc.str(.notFound),
                     exists: viewModel.userScriptPath != nil
                 )
                 
                 DiagnosticRow(
-                    label: "扫描到的 .pack 文件",
-                    value: "\(viewModel.mods.count) 个",
+                    label: loc.str(.scannedPacks),
+                    value: loc.str(.countUnit(viewModel.mods.count)),
                     exists: !viewModel.mods.isEmpty
                 )
             }
             
             if let error = viewModel.errorMessage {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("错误信息")
+                    Text(loc.str(.errorInfo))
                         .font(.caption)
                         .foregroundColor(.secondary)
                     Text(error)
@@ -692,7 +709,7 @@ struct DiagnosticsView: View {
             
             HStack {
                 Spacer()
-                Button("关闭") {
+                Button(loc.str(.close)) {
                     dismiss()
                 }
                 .keyboardShortcut(.return)
@@ -731,4 +748,5 @@ struct DiagnosticRow: View {
 #Preview {
     ContentView()
         .environmentObject(ModListViewModel())
+        .environmentObject(LocalizationManager.shared)
 }
