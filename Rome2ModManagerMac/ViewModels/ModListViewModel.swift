@@ -8,6 +8,29 @@ import Combine
 import SwiftUI
 import UniformTypeIdentifiers
 
+/// 提示类型枚举
+enum ToastType {
+    case success
+    case error
+    case info
+    
+    var color: Color {
+        switch self {
+        case .success: return .green
+        case .error: return .red
+        case .info: return .blue
+        }
+    }
+    
+    var icon: String {
+        switch self {
+        case .success: return "checkmark.circle.fill"
+        case .error: return "xmark.circle.fill"
+        case .info: return "info.circle.fill"
+        }
+    }
+}
+
 /// MOD 列表的视图模型，管理状态与操作
 final class ModListViewModel: ObservableObject {
     
@@ -19,15 +42,24 @@ final class ModListViewModel: ObservableObject {
     /// 是否正在扫描
     @Published var isScanning = false
     
-    /// 错误信息
+    /// 错误信息（持久显示）
     @Published var errorMessage: String?
     
     /// 操作提示信息
     @Published var toastMessage: String?
     
+    /// 提示类型
+    @Published var toastType: ToastType = .info
+    
+    /// 当前选中的 MOD ID
+    @Published var selectedModId: UUID?
+    
+    /// 选中 MOD 的图片列表
+    @Published var selectedModImages: [URL] = []
+    
     // MARK: - 服务
     
-    private let fileManager = ModFileManager()
+    let fileManager = ModFileManager()
     
     // MARK: - 计算属性
     
@@ -88,8 +120,7 @@ final class ModListViewModel: ObservableObject {
     func resetPathsToDefault() {
         AppSettings.shared.resetAll()
         errorMessage = nil
-        toastMessage = "已恢复默认路径，请重新扫描"
-        clearToastAfterDelay()
+        showToast("已恢复默认路径，请重新扫描", type: .info)
     }
     
     /// 从 NSOpenPanel 选择 Workshop 目录
@@ -103,8 +134,7 @@ final class ModListViewModel: ObservableObject {
         
         if panel.runModal() == .OK, let url = panel.url {
             AppSettings.shared.customWorkshopPath = url.path
-            toastMessage = "已设置 Workshop 路径，请重新扫描"
-            clearToastAfterDelay()
+            showToast("已设置 Workshop 路径: \(url.lastPathComponent)，请重新扫描", type: .success)
         }
     }
     
@@ -120,8 +150,7 @@ final class ModListViewModel: ObservableObject {
         
         if panel.runModal() == .OK, let url = panel.url {
             AppSettings.shared.customUserScriptPath = url.path
-            toastMessage = "已设置 user.script.txt 路径"
-            clearToastAfterDelay()
+            showToast("已设置 user.script.txt 路径", type: .success)
         }
     }
     
@@ -141,15 +170,22 @@ final class ModListViewModel: ObservableObject {
                 self.mods = foundMods
                 self.isScanning = false
                 
+                // 清除旧选择
+                self.selectedModId = nil
+                self.selectedModImages = []
+                
                 if foundMods.isEmpty {
                     if !self.workshopExists {
-                        self.errorMessage = "Workshop 目录不存在：\(self.fileManager.getWorkshopPath())"
+                        let msg = "Workshop 目录不存在：\(self.fileManager.getWorkshopPath())"
+                        self.errorMessage = msg
+                        self.showToast("Workshop 目录不存在", type: .error)
                     } else {
-                        self.errorMessage = "Workshop 目录未发现 .pack 文件"
+                        let msg = "Workshop 目录未发现 .pack 文件"
+                        self.errorMessage = msg
+                        self.showToast("未发现 MOD 文件", type: .error)
                     }
                 } else {
-                    self.toastMessage = "已扫描到 \(foundMods.count) 个 MOD"
-                    self.clearToastAfterDelay()
+                    self.showToast("已扫描到 \(foundMods.count) 个 MOD", type: .success)
                 }
             }
         }
@@ -159,6 +195,7 @@ final class ModListViewModel: ObservableObject {
     func writeUserScript() {
         guard !mods.isEmpty else {
             errorMessage = "没有 MOD 可写入"
+            showToast("没有 MOD 可写入", type: .error)
             return
         }
         
@@ -166,11 +203,12 @@ final class ModListViewModel: ObservableObject {
         
         do {
             try fileManager.writeUserScript(mods: mods, preserving: existingContent)
-            toastMessage = "已写入 \(enabledCount) 个启用 MOD 到 user.script.txt"
+            let count = enabledCount
             errorMessage = nil
-            clearToastAfterDelay()
+            showToast("已写入 \(count) 个启用 MOD 到 user.script.txt", type: .success)
         } catch {
             errorMessage = "写入失败: \(error.localizedDescription)"
+            showToast("写入失败: \(error.localizedDescription)", type: .error)
         }
     }
     
@@ -180,6 +218,7 @@ final class ModListViewModel: ObservableObject {
         
         if let index = mods.firstIndex(where: { $0.id == mod.id }) {
             mods[index].displayName = newName.trimmingCharacters(in: .whitespaces)
+            showToast("已重命名为「\(newName)」", type: .success)
         }
     }
     
@@ -189,6 +228,7 @@ final class ModListViewModel: ObservableObject {
         for i in mods.indices {
             mods[i].isEnabled = targetState
         }
+        showToast(targetState ? "已全部启用" : "已全部禁用", type: .info)
     }
     
     /// 更新加载顺序（通过拖拽）
@@ -198,11 +238,35 @@ final class ModListViewModel: ObservableObject {
         }
     }
     
-    // MARK: - 辅助
+    /// 选中 MOD 并加载其图片
+    func selectMod(_ modId: UUID?) {
+        selectedModId = modId
+        if let modId = modId, let mod = mods.first(where: { $0.id == modId }) {
+            selectedModImages = fileManager.findImagesInModFolder(relativePath: mod.workshopSubfolder)
+        } else {
+            selectedModImages = []
+        }
+    }
     
-    private func clearToastAfterDelay() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
-            self?.toastMessage = nil
+    /// 获取指定 MOD 的图片（供外部调用）
+    func imagesForMod(_ mod: ModItem) -> [URL] {
+        return fileManager.findImagesInModFolder(relativePath: mod.workshopSubfolder)
+    }
+    
+    // MARK: - Toast 辅助
+    
+    /// 显示提示横幅
+    private func showToast(_ message: String, type: ToastType) {
+        toastMessage = message
+        toastType = type
+        
+        // 错误消息显示更久
+        let duration: Double = (type == .error) ? 5 : 3
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration) { [weak self] in
+            if self?.toastMessage == message {
+                self?.toastMessage = nil
+            }
         }
     }
 }

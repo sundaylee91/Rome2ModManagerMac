@@ -261,6 +261,44 @@ class ModFileManager {
         print("✅ 已写入 \(enabledMods.count) 个 MOD 到 user.script.txt")
     }
     
+    // MARK: - 图片查找
+    
+    /// 支持的图片扩展名
+    private let imageExtensions = ["png", "jpg", "jpeg", "gif", "webp", "bmp", "tiff", "tif", "heic", "heif"]
+    
+    /// 在 MOD 所在文件夹中查找所有图片文件
+    /// - Parameter relativePath: MOD 在 Workshop 中的相对父目录（如 "2532655874"）
+    /// - Returns: 找到的图片文件 URL 列表
+    func findImagesInModFolder(relativePath: String) -> [URL] {
+        guard !relativePath.isEmpty else { return [] }
+        
+        let modFolderPath = "\(workshopPath)/\(relativePath)"
+        let fileManager = FileManager.default
+        
+        guard fileManager.fileExists(atPath: modFolderPath) else {
+            print("⚠️ MOD 文件夹不存在: \(modFolderPath)")
+            return []
+        }
+        
+        guard let contents = try? fileManager.contentsOfDirectory(atPath: modFolderPath) else {
+            return []
+        }
+        
+        let imageUrls = contents
+            .filter { filename in
+                let lowercased = filename.lowercased()
+                return imageExtensions.contains { lowercased.hasSuffix(".\($0)") }
+            }
+            .map { URL(fileURLWithPath: "\(modFolderPath)/\($0)") }
+            .sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
+        
+        if !imageUrls.isEmpty {
+            print("🖼️ 在 \(relativePath) 中找到 \(imageUrls.count) 张图片")
+        }
+        
+        return imageUrls
+    }
+    
     // MARK: - 辅助功能
     
     /// 打开 Workshop 目录（用于手动管理 MOD）

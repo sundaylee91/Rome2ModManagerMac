@@ -15,154 +15,188 @@ struct ContentView: View {
     @State private var showRenameAlert = false
     @State private var renameText = ""
     @State private var renamingMod: ModItem?
+    @State private var selectedModImages: [URL] = []
     
     var body: some View {
-        HSplitView {
-            // 左侧：MOD 列表
-            VStack(spacing: 0) {
-                // 工具栏
-                HStack {
-                    Button(action: { viewModel.scanMods() }) {
-                        Label("扫描", systemImage: "arrow.triangle.2.circlepath")
+        ZStack {
+            HSplitView {
+                // 左侧：MOD 列表
+                VStack(spacing: 0) {
+                    // 工具栏
+                    HStack {
+                        Button(action: { viewModel.scanMods() }) {
+                            Label("扫描", systemImage: "arrow.triangle.2.circlepath")
+                        }
+                        .help("扫描 Workshop MOD 文件夹 (⌘R)")
+                        
+                        Button(action: { viewModel.writeUserScript() }) {
+                            Label("写入", systemImage: "square.and.arrow.down")
+                        }
+                        .help("写入 user.script.txt (⌘S)")
+                        .disabled(viewModel.mods.isEmpty)
+                        
+                        Divider()
+                            .frame(height: 20)
+                        
+                        Button(action: { showSettings = true }) {
+                            Label("设置", systemImage: "gearshape")
+                        }
+                        .help("设置路径")
+                        
+                        Button(action: { showDiagnostics = true }) {
+                            Label("诊断", systemImage: "magnifyingglass")
+                        }
+                        .help("路径诊断")
+                        
+                        Spacer()
+                        
+                        if viewModel.isScanning {
+                            ProgressView()
+                                .scaleEffect(0.7)
+                                .frame(width: 20, height: 20)
+                        }
+                        
+                        Text("\(viewModel.mods.count) 个 MOD")
+                            .foregroundColor(.secondary)
+                            .font(.caption)
                     }
-                    .help("扫描 Workshop MOD 文件夹 (⌘R)")
-                    
-                    Button(action: { viewModel.writeUserScript() }) {
-                        Label("写入", systemImage: "square.and.arrow.down")
-                    }
-                    .help("写入 user.script.txt (⌘S)")
-                    .disabled(viewModel.mods.isEmpty)
+                    .padding(.horizontal)
+                    .padding(.vertical, 8)
+                    .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
                     
                     Divider()
-                        .frame(height: 20)
                     
-                    Button(action: { showSettings = true }) {
-                        Label("设置", systemImage: "gearshape")
-                    }
-                    .help("设置路径")
-                    
-                    Button(action: { showDiagnostics = true }) {
-                        Label("诊断", systemImage: "magnifyingglass")
-                    }
-                    .help("路径诊断")
-                    
-                    Spacer()
-                    
-                    if viewModel.isScanning {
-                        ProgressView()
-                            .scaleEffect(0.7)
-                            .frame(width: 20, height: 20)
-                    }
-                    
-                    Text("\(viewModel.mods.count) 个 MOD")
-                        .foregroundColor(.secondary)
-                        .font(.caption)
-                }
-                .padding(.horizontal)
-                .padding(.vertical, 8)
-                .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
-                
-                Divider()
-                
-                // MOD 列表
-                if viewModel.mods.isEmpty && !viewModel.isScanning {
-                    VStack(spacing: 16) {
-                        Image(systemName: "tray")
-                            .font(.system(size: 40))
-                            .foregroundColor(.secondary)
-                        Text("暂无 MOD")
-                            .font(.title3)
-                            .foregroundColor(.secondary)
-                        Text("点击「扫描」或按 ⌘R 加载 MOD 列表")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        
-                        if let error = viewModel.errorMessage {
-                            Text(error)
+                    // MOD 列表
+                    if viewModel.mods.isEmpty && !viewModel.isScanning {
+                        VStack(spacing: 16) {
+                            Image(systemName: "tray")
+                                .font(.system(size: 40))
+                                .foregroundColor(.secondary)
+                            Text("暂无 MOD")
+                                .font(.title3)
+                                .foregroundColor(.secondary)
+                            Text("点击「扫描」或按 ⌘R 加载 MOD 列表")
                                 .font(.caption)
-                                .foregroundColor(.red)
-                                .padding()
-                                .background(Color.red.opacity(0.1))
-                                .cornerRadius(8)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else {
-                    List {
-                        ForEach($viewModel.mods) { $mod in
-                            ModRowView(mod: $mod) {
-                                renamingMod = mod
-                                renameText = mod.displayName
-                                showRenameAlert = true
-                            }
-                            .onTapGesture {
-                                mod.isEnabled.toggle()
+                                .foregroundColor(.secondary)
+                            
+                            if let error = viewModel.errorMessage {
+                                Text(error)
+                                    .font(.caption)
+                                    .foregroundColor(.red)
+                                    .padding()
+                                    .background(Color.red.opacity(0.1))
+                                    .cornerRadius(8)
                             }
                         }
-                        .onMove { source, destination in
-                            viewModel.mods.move(fromOffsets: source, toOffset: destination)
-                            // 拖拽后同步 loadOrder 到新的列表位置
-                            viewModel.updateLoadOrder()
-                        }
-                    }
-                    .listStyle(.inset)
-                }
-                
-                Divider()
-                
-                // 状态栏
-                HStack {
-                    if let scriptPath = viewModel.userScriptPath {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.green)
-                            .font(.caption)
-                        Text("脚本: \(scriptPath)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.orange)
-                            .font(.caption)
-                        Text("未找到 user.script.txt")
+                        List {
+                            ForEach($viewModel.mods) { $mod in
+                                ModRowView(
+                                    mod: $mod,
+                                    isSelected: viewModel.selectedModId == mod.id
+                                ) {
+                                    renamingMod = mod
+                                    renameText = mod.displayName
+                                    showRenameAlert = true
+                                }
+                                .onTapGesture {
+                                    viewModel.selectMod(mod.id)
+                                }
+                            }
+                            .onMove { source, destination in
+                                viewModel.mods.move(fromOffsets: source, toOffset: destination)
+                                // 拖拽后同步 loadOrder 到新的列表位置
+                                viewModel.updateLoadOrder()
+                            }
+                        }
+                        .listStyle(.inset)
+                    }
+                    
+                    Divider()
+                    
+                    // 状态栏
+                    HStack {
+                        if let scriptPath = viewModel.userScriptPath {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.green)
+                                .font(.caption)
+                            Text("脚本: \(scriptPath)")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                        } else {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.orange)
+                                .font(.caption)
+                            Text("未找到 user.script.txt")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        Spacer()
+                        
+                        Circle()
+                            .fill(viewModel.workshopExists ? Color.green : Color.red)
+                            .frame(width: 8, height: 8)
+                        Text(viewModel.workshopExists ? "Workshop 已连接" : "Workshop 未找到")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
-                    
-                    Spacer()
-                    
-                    Circle()
-                        .fill(viewModel.workshopExists ? Color.green : Color.red)
-                        .frame(width: 8, height: 8)
-                    Text(viewModel.workshopExists ? "Workshop 已连接" : "Workshop 未找到")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    .padding(.horizontal)
+                    .padding(.vertical, 6)
+                    .background(Color(NSColor.controlBackgroundColor).opacity(0.3))
                 }
-                .padding(.horizontal)
-                .padding(.vertical, 6)
-                .background(Color(NSColor.controlBackgroundColor).opacity(0.3))
+                .frame(minWidth: 300)
+                
+                // 右侧：详情面板
+                if let selectedId = viewModel.selectedModId,
+                   let selectedMod = viewModel.mods.first(where: { $0.id == selectedId }) {
+                    ModDetailView(
+                        mod: selectedMod,
+                        imageUrls: viewModel.selectedModImages
+                    )
+                    .frame(minWidth: 200, idealWidth: 320)
+                } else {
+                    VStack(spacing: 12) {
+                        Image(systemName: "info.circle")
+                            .font(.system(size: 36))
+                            .foregroundColor(.secondary)
+                        Text("点击左侧 MOD 查看详情")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                        Text("详情包括 MOD 信息和预览图片")
+                            .font(.caption)
+                            .foregroundColor(.secondary.opacity(0.7))
+                    }
+                    .frame(minWidth: 200, idealWidth: 320)
+                }
             }
-            .frame(minWidth: 300)
             
-            // 右侧：详情面板
-            if let selectedMod = viewModel.mods.first(where: { _ in true }) {
-                // 暂时显示第一个 MOD 的详情
-                ModDetailView(mod: selectedMod)
-                    .frame(minWidth: 200, idealWidth: 280)
-            } else {
-                VStack {
-                    Image(systemName: "info.circle")
-                        .font(.largeTitle)
-                        .foregroundColor(.secondary)
-                    Text("选择一个 MOD 查看详情")
-                        .foregroundColor(.secondary)
+            // Toast 横幅覆盖层
+            VStack {
+                if let message = viewModel.toastMessage {
+                    ToastBanner(message: message, type: viewModel.toastType) {
+                        viewModel.toastMessage = nil
+                    }
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .zIndex(100)
                 }
-                .frame(minWidth: 200, idealWidth: 280)
+                Spacer()
             }
         }
+        .animation(.spring(response: 0.4, dampingFraction: 0.7), value: viewModel.toastMessage != nil)
         .onAppear {
             viewModel.scanMods()
+        }
+        .onChange(of: viewModel.selectedModId) { newId in
+            // 当选中变化时同步图片（ViewModel 已在 selectMod 中处理）
+            if let id = newId, let mod = viewModel.mods.first(where: { $0.id == id }) {
+                selectedModImages = viewModel.imagesForMod(mod)
+            } else {
+                selectedModImages = []
+            }
         }
         .sheet(isPresented: $showDiagnostics) {
             DiagnosticsView()
@@ -186,10 +220,54 @@ struct ContentView: View {
     }
 }
 
+// MARK: - Toast 横幅
+
+struct ToastBanner: View {
+    let message: String
+    let type: ToastType
+    let onDismiss: () -> Void
+    
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: type.icon)
+                .foregroundColor(type.color)
+                .font(.title3)
+            
+            Text(message)
+                .font(.callout)
+                .foregroundColor(.primary)
+                .lineLimit(2)
+            
+            Spacer()
+            
+            Button(action: onDismiss) {
+                Image(systemName: "xmark")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+            .buttonStyle(.borderless)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color(NSColor.controlBackgroundColor))
+                .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 5)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(type.color.opacity(0.4), lineWidth: 1)
+        )
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+    }
+}
+
 // MARK: - MOD 行视图
 
 struct ModRowView: View {
     @Binding var mod: ModItem
+    var isSelected: Bool
     var onRename: () -> Void
     
     var body: some View {
@@ -227,10 +305,15 @@ struct ModRowView: View {
                     .font(.caption)
             }
             .buttonStyle(.borderless)
-            .opacity(0.6)
+            .opacity(isSelected ? 1 : 0.4)
             .help("重命名")
         }
         .padding(.vertical, 4)
+        .padding(.horizontal, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 6)
+                .fill(isSelected ? Color.accentColor.opacity(0.12) : Color.clear)
+        )
     }
 }
 
@@ -238,36 +321,165 @@ struct ModRowView: View {
 
 struct ModDetailView: View {
     let mod: ModItem
+    let imageUrls: [URL]
+    
+    @State private var fullImageUrl: URL?
+    @State private var showFullImage = false
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("MOD 详情")
-                .font(.headline)
-                .padding(.bottom, 4)
-            
-            Group {
-                DetailRow(label: "名称", value: mod.displayName)
-                DetailRow(label: "文件名", value: mod.packFileName)
-                DetailRow(label: "状态", value: mod.isEnabled ? "✓ 启用" : "✗ 禁用")
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                // 标题
+                Text(mod.displayName)
+                    .font(.title3)
+                    .fontWeight(.bold)
+                    .lineLimit(2)
+                
+                Divider()
+                
+                // 基本信息
+                Group {
+                    DetailRow(label: "文件名", value: mod.packFileName)
+                    DetailRow(label: "状态", value: mod.isEnabled ? "✓ 启用" : "✗ 禁用")
+                    DetailRow(label: "加载顺序", value: "第 \(mod.loadOrder + 1) 位")
+                    
+                    if !mod.workshopSubfolder.isEmpty {
+                        DetailRow(label: "所在文件夹", value: mod.workshopSubfolder)
+                    }
+                }
+                
+                // 预览图片
+                if !imageUrls.isEmpty {
+                    Divider()
+                    
+                    HStack {
+                        Image(systemName: "photo.on.rectangle")
+                            .foregroundColor(.accentColor)
+                        Text("预览图片")
+                            .font(.headline)
+                        Text("(\(imageUrls.count))")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    LazyVStack(spacing: 10) {
+                        ForEach(imageUrls, id: \.self) { url in
+                            VStack(spacing: 4) {
+                                if let nsImage = NSImage(contentsOf: url) {
+                                    Image(nsImage: nsImage)
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fit)
+                                        .frame(maxWidth: 260, maxHeight: 200)
+                                        .cornerRadius(6)
+                                        .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                                        .onTapGesture {
+                                            fullImageUrl = url
+                                            showFullImage = true
+                                        }
+                                        .help("点击查看大图")
+                                } else {
+                                    HStack {
+                                        Image(systemName: "photo.badge.exclamationmark")
+                                            .foregroundColor(.orange)
+                                        Text("无法加载")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                                
+                                Text(url.lastPathComponent)
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                                    .lineLimit(1)
+                            }
+                            .padding(8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color(NSColor.controlBackgroundColor).opacity(0.5))
+                            )
+                        }
+                    }
+                } else {
+                    Divider()
+                    HStack(spacing: 6) {
+                        Image(systemName: "photo.on.rectangle")
+                            .foregroundColor(.secondary)
+                            .font(.caption)
+                        Text("该 MOD 文件夹中没有预览图片")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
+                Divider()
+                
+                // 加载顺序说明
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("MOD 加载顺序说明")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                    Text("列表中的 MOD 按从上到下的顺序加载。拖拽行可调整加载顺序。")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                
+                Spacer()
             }
+            .padding()
+        }
+        .sheet(isPresented: $showFullImage) {
+            if let url = fullImageUrl {
+                FullImageView(imageUrl: url)
+            }
+        }
+    }
+}
+
+// MARK: - 大图查看
+
+struct FullImageView: View {
+    let imageUrl: URL
+    @Environment(\.dismiss) var dismiss
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text(imageUrl.lastPathComponent)
+                    .font(.headline)
+                Spacer()
+                Button("关闭") {
+                    dismiss()
+                }
+                .keyboardShortcut(.return)
+            }
+            .padding()
+            .background(Color(NSColor.controlBackgroundColor))
             
             Divider()
             
-            VStack(alignment: .leading, spacing: 4) {
-                Text("MOD 加载顺序说明")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                Text("列表中的 MOD 按从上到下的顺序加载。拖拽行可调整加载顺序。")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+            if let nsImage = NSImage(contentsOf: imageUrl) {
+                ScrollView([.horizontal, .vertical]) {
+                    Image(nsImage: nsImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .padding()
+                }
+            } else {
+                VStack {
+                    Image(systemName: "photo.badge.exclamationmark")
+                        .font(.system(size: 48))
+                        .foregroundColor(.secondary)
+                    Text("无法加载图片")
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            
-            Spacer()
         }
-        .padding()
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .frame(minWidth: 500, minHeight: 400)
     }
 }
+
+// MARK: - 详情行
 
 struct DetailRow: View {
     let label: String
@@ -418,15 +630,6 @@ struct SettingsView: View {
                 }
                 .keyboardShortcut(.return)
                 .buttonStyle(.borderedProminent)
-            }
-            
-            if let toast = viewModel.toastMessage {
-                Text(toast)
-                    .font(.caption)
-                    .foregroundColor(.green)
-                    .padding(8)
-                    .background(Color.green.opacity(0.1))
-                    .cornerRadius(6)
             }
         }
         .padding()

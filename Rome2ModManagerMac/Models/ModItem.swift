@@ -22,8 +22,13 @@ struct ModItem: Identifiable, Codable, Equatable, Sendable {
     /// 在列表中的加载顺序（0 为最先加载）
     var loadOrder: Int
     
-    /// Workshop 的相对路径（用于区分同名 MOD）
+    /// Workshop 的相对路径（用于区分同名 MOD，如 "2532655874"）
     var relativePath: String?
+    
+    /// MOD 所在的 Workshop 子文件夹（用于查找图片等资源）
+    var workshopSubfolder: String {
+        return relativePath ?? ""
+    }
     
     init(
         packFileName: String,
