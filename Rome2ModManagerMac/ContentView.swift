@@ -29,12 +29,14 @@ struct ContentView: View {
                             Label(loc.str(.scanMods), systemImage: "arrow.triangle.2.circlepath")
                         }
                         .help(loc.str(.scanHelp))
+                        .focusEffectDisabled()
                         
                         Button(action: { viewModel.writeUserScript() }) {
                             Label(loc.str(.writeScript), systemImage: "square.and.arrow.down")
                         }
                         .help(loc.str(.writeHelp))
                         .disabled(viewModel.mods.isEmpty)
+                        .focusEffectDisabled()
                         
                         Divider()
                             .frame(height: 20)
@@ -43,6 +45,7 @@ struct ContentView: View {
                             Label(loc.str(.launchGame), systemImage: "play.fill")
                         }
                         .help(loc.str(.launchHelp))
+                        .focusEffectDisabled()
                         
                         Divider()
                             .frame(height: 20)
@@ -51,11 +54,13 @@ struct ContentView: View {
                             Label(loc.str(.settings), systemImage: "gearshape")
                         }
                         .help(loc.str(.settingsHelp))
+                        .focusEffectDisabled()
                         
                         Button(action: { showDiagnostics = true }) {
                             Label(loc.str(.diagnostics), systemImage: "magnifyingglass")
                         }
                         .help(loc.str(.diagnosticsHelp))
+                        .focusEffectDisabled()
                         
                         Spacer()
                         
