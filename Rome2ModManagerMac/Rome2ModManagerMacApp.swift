@@ -22,6 +22,13 @@ struct Rome2ModManagerMacApp: App {
         .defaultSize(width: 950, height: 580)
         .windowResizability(.contentMinSize)
         .commands {
+            // 拦截系统「关于」菜单 → 打开自定义关于窗口
+            CommandGroup(replacing: .appInfo) {
+                Button("About \(AppInfo.appName)") {
+                    AboutWindowController.show()
+                }
+            }
+
             CommandGroup(replacing: .newItem) {}
 
             CommandGroup(after: .newItem) {
@@ -37,12 +44,29 @@ struct Rome2ModManagerMacApp: App {
                 .disabled(viewModel.mods.isEmpty)
             }
         }
+    }
+}
 
-        // 自定义关于窗口：菜单栏 → 文件 → 关于 可打开
-        Window("About \(AppInfo.appName)", id: "about") {
-            AboutView()
+/// 管理自定义关于窗口
+final class AboutWindowController: NSObject {
+    private static var window: NSWindow?
+
+    static func show() {
+        if let existing = window, existing.isVisible {
+            existing.makeKeyAndOrderFront(nil)
+            return
         }
-        .defaultSize(width: 360, height: 340)
-        .windowResizability(.contentSize)
+
+        let aboutView = AboutView()
+        let hosting = NSHostingController(rootView: aboutView)
+
+        let w = NSWindow(contentViewController: hosting)
+        w.title = "About \(AppInfo.appName)"
+        w.styleMask = [.titled, .closable]
+        w.isReleasedWhenClosed = false
+        w.center()
+        w.makeKeyAndOrderFront(nil)
+
+        window = w
     }
 }
