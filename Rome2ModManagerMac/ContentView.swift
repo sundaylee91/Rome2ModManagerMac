@@ -106,7 +106,6 @@ struct ContentView: View {
                             .onMove(perform: viewModel.moveMod)
                         }
                         .listStyle(.inset)
-                        .environment(\.editMode, .constant(.active))
                     }
                     
                     Divider()
@@ -271,6 +270,12 @@ struct ModRowView: View {
     
     var body: some View {
         HStack(spacing: 10) {
+            // 拖拽排序手柄
+            Image(systemName: "line.3.horizontal")
+                .font(.caption)
+                .foregroundColor(.secondary.opacity(0.4))
+                .frame(width: 12)
+            
             Toggle("", isOn: $mod.isEnabled)
                 .toggleStyle(.switch)
                 .controlSize(.small)
