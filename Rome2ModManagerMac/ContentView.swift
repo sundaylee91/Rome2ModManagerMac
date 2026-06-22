@@ -385,7 +385,7 @@ struct ModDetailView: View {
                     HStack {
                         Image(systemName: "photo.on.rectangle")
                             .foregroundColor(.accentColor)
-                        Text(loc.str(.previewImages(imageUrls.count)))
+                        Text(loc.str(.previewImages))
                             .font(.headline)
                     }
                     
@@ -747,7 +747,7 @@ struct SettingsView: View {
             }
         }
         .padding()
-        .frame(width: 520, height: showDiagnostics ? 650 : 600)
+        .frame(width: 520, height: showDiagnostics ? 720 : 600)
         .onAppear {
             workshopPathText = viewModel.customWorkshopPath
             userScriptPathText = viewModel.customUserScriptPath

@@ -84,7 +84,7 @@ enum L10n {
     case fileName, status, loadOrder, folder
     case enabled, disabled
     case loadOrderLabel(Int)
-    case previewImages(Int), noPreviewImages, clickToEnlarge
+    case previewImages, noPreviewImages, clickToEnlarge
     case loadOrderInfo, loadOrderDesc
     case cannotLoad, cannotLoadImage
     case selectGamePath
@@ -192,7 +192,7 @@ enum L10n {
         case .enabled: return "✓ 启用"
         case .disabled: return "✗ 关闭"
         case .loadOrderLabel(let n): return "第 \(n) 位"
-        case .previewImages(let n): return "预览图片 (\(n))"
+        case .previewImages: return "预览图片"
         case .noPreviewImages: return "该 MOD 文件夹中没有预览图片"
         case .clickToEnlarge: return "点击查看大图"
         case .loadOrderInfo: return "MOD 加载顺序说明"
@@ -315,7 +315,7 @@ enum L10n {
         case .enabled: return "✓ Enabled"
         case .disabled: return "✗ Disabled"
         case .loadOrderLabel(let n): return "#\(n)"
-        case .previewImages(let n): return "Preview Images (\(n))"
+        case .previewImages: return "Preview Images"
         case .noPreviewImages: return "No preview images in this MOD folder"
         case .clickToEnlarge: return "Click to enlarge"
         case .loadOrderInfo: return "Load Order Info"
