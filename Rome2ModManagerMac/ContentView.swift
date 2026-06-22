@@ -538,6 +538,10 @@ struct SettingsView: View {
                 HStack {
                     Text(loc.str(.gamePath))
                         .font(.headline)
+                        .foregroundColor(.accentColor)
+                        .underline()
+                        .onTapGesture { openGamePathInFinder() }
+                        .help(loc.str(.openInFinder))
                     if let path = AppSettings.shared.customGamePath, !path.isEmpty {
                         Text("(\(loc.str(.custom)))")
                             .font(.caption)
@@ -584,6 +588,14 @@ struct SettingsView: View {
                 HStack {
                     Text(loc.str(.workshopDir))
                         .font(.headline)
+                        .foregroundColor(.accentColor)
+                        .underline()
+                        .onTapGesture {
+                            if let path = viewModel.workshopPath?.path {
+                                NSWorkspace.shared.open(URL(fileURLWithPath: path))
+                            }
+                        }
+                        .help(loc.str(.openInFinder))
                     if viewModel.isUsingCustomWorkshopPath {
                         Text("(\(loc.str(.custom)))")
                             .font(.caption)
@@ -625,6 +637,14 @@ struct SettingsView: View {
                 HStack {
                     Text(loc.str(.userScriptLabel))
                         .font(.headline)
+                        .foregroundColor(.accentColor)
+                        .underline()
+                        .onTapGesture {
+                            if let path = viewModel.userScriptPath {
+                                NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
+                            }
+                        }
+                        .help(loc.str(.openInFinder))
                     if viewModel.isUsingCustomUserScriptPath {
                         Text("(\(loc.str(.custom)))")
                             .font(.caption)
@@ -699,6 +719,34 @@ struct SettingsView: View {
             workshopPathText = viewModel.customWorkshopPath
             userScriptPathText = viewModel.customUserScriptPath
             gamePathText = AppSettings.shared.customGamePath ?? ""
+        }
+    }
+    
+    // MARK: - 在 Finder 中定位游戏路径
+    
+    /// 点击「游戏路径」标题时，跳转到对应的文件夹
+    func openGamePathInFinder() {
+        // 优先自定义路径
+        if let customPath = AppSettings.shared.customGamePath, !customPath.isEmpty {
+            let url = URL(fileURLWithPath: customPath)
+            if FileManager.default.fileExists(atPath: customPath) {
+                // 选中 .app 文件在 Finder 中高亮显示
+                NSWorkspace.shared.activateFileViewerSelecting([url])
+                return
+            }
+        }
+        
+        // 默认：Steam 安装目录
+        let homeDir = NSHomeDirectory()
+        let commonPath = "\(homeDir)/Library/Application Support/Steam/steamapps/common/Total War ROME II"
+        if FileManager.default.fileExists(atPath: commonPath) {
+            NSWorkspace.shared.open(URL(fileURLWithPath: commonPath))
+        } else {
+            // 回退：Steam common 父目录
+            let steamCommon = "\(homeDir)/Library/Application Support/Steam/steamapps/common"
+            if FileManager.default.fileExists(atPath: steamCommon) {
+                NSWorkspace.shared.open(URL(fileURLWithPath: steamCommon))
+            }
         }
     }
     

@@ -100,6 +100,7 @@ enum L10n {
     case resetDefaults
     case workshopPathSet(String)
     case userScriptPathSet
+    case openInFinder
     
     // 诊断
     case diagnosticsTitle
@@ -216,6 +217,7 @@ enum L10n {
         case .resetDefaults: return "恢复默认路径"
         case .workshopPathSet(let p): return "已设置 Workshop 路径: \(p)，请重新扫描"
         case .userScriptPathSet: return "已设置 user.script.txt 路径"
+        case .openInFinder: return "点击在 Finder 中显示"
         case .diagnosticsTitle: return "路径诊断"
         case .workshopPath: return "Workshop 路径"
         case .userScriptPath: return "user.script.txt 路径"
@@ -337,6 +339,7 @@ enum L10n {
         case .resetDefaults: return "Reset to Defaults"
         case .workshopPathSet(let p): return "Workshop path set: \(p). Please rescan."
         case .userScriptPathSet: return "user.script.txt path set"
+        case .openInFinder: return "Click to show in Finder"
         case .diagnosticsTitle: return "Path Diagnostics"
         case .workshopPath: return "Workshop Path"
         case .userScriptPath: return "user.script.txt Path"
