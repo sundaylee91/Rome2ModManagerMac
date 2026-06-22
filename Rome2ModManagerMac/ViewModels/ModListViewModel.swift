@@ -215,6 +215,14 @@ final class ModListViewModel: ObservableObject {
             try fileManager.writeUserScript(mods: mods, preserving: existingContent)
             let count = enabledCount
             errorMessage = nil
+            
+            // 同步到 Rome 2 官方启动器的 Preferences Data（尽力而为，不影响主流程）
+            do {
+                try fileManager.syncPreferencesData(mods: mods)
+            } catch {
+                print("⚠️ 同步 Preferences Data 失败: \(error.localizedDescription)")
+            }
+            
             showToast(loc.str(.scriptWritten(count)), type: .success)
         } catch {
             errorMessage = loc.str(.scriptWriteFailed(error.localizedDescription))

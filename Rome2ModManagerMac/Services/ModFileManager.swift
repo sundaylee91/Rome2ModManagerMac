@@ -33,6 +33,9 @@ class ModFileManager {
     /// 默认 user.script.txt 路径
     private let defaultUserScriptPath: String
     
+    /// Preferences Data 路径（Rome 2 官方启动器的 MOD 开关状态）
+    private let preferencesDataPath: String
+    
     // MARK: - 初始化
     
     init() {
@@ -46,12 +49,17 @@ class ModFileManager {
         // Rome 2 user.script.txt 路径（Feral Interactive 版 Rome 2 的 VFS 映射路径）
         let rome2ScriptPath = "\(appSupport)/Feral Interactive/Total War ROME II/VFS/User/AppData/Roaming/The Creative Assembly/Rome2/scripts/user.script.txt"
         
+        // Rome 2 官方启动器 Preferences Data 路径
+        let prefsPath = "\(appSupport)/Feral Interactive/Total War ROME II/Preferences Data"
+        
         self.defaultWorkshopPath = steamWorkshop
         self.defaultUserScriptPath = rome2ScriptPath
+        self.preferencesDataPath = prefsPath
         
         print("📁 ModFileManager 初始化")
         print("   默认 Workshop 路径: \(defaultWorkshopPath)")
         print("   默认 user.script.txt 路径: \(defaultUserScriptPath)")
+        print("   Preferences Data 路径: \(preferencesDataPath)")
         if let custom = AppSettings.shared.customWorkshopPath, !custom.isEmpty {
             print("   ⚙️ 自定义 Workshop 路径: \(custom)")
         }
@@ -75,6 +83,11 @@ class ModFileManager {
     /// 检查 user.script.txt 是否存在
     func userScriptExists() -> Bool {
         return FileManager.default.fileExists(atPath: userScriptPath)
+    }
+    
+    /// 检查 Preferences Data 文件是否存在
+    func preferencesDataExists() -> Bool {
+        return FileManager.default.fileExists(atPath: preferencesDataPath)
     }
     
     /// 是否使用了自定义路径
@@ -287,6 +300,81 @@ class ModFileManager {
         
         try content.write(toFile: userScriptPath, atomically: true, encoding: .utf8)
         print("✅ 已写入 \(enabledMods.count) 个 MOD 到 user.script.txt")
+    }
+    
+    // MARK: - Preferences Data 同步
+    
+    /// 读取 Preferences Data 文件内容
+    /// - Returns: 文件内容（如不存在返回 nil）
+    func readPreferencesData() -> String? {
+        guard preferencesDataExists() else {
+            print("⚠️ Preferences Data 不存在: \(preferencesDataPath)")
+            return nil
+        }
+        
+        do {
+            return try String(contentsOfFile: preferencesDataPath, encoding: .utf8)
+        } catch {
+            print("❌ 读取 Preferences Data 失败: \(error.localizedDescription)")
+            return nil
+        }
+    }
+    
+    /// 同步 MOD 的启用/关闭状态到 Rome 2 官方启动器的 Preferences Data
+    ///
+    /// Preferences Data 中的格式：
+    /// ```
+    /// <key name="Launcher">
+    ///     <key name="mods">
+    ///         <value name="MOD_NAME.pack" type="string">TIMESTAMP|STATUS</value>
+    ///     </key>
+    /// </key>
+    /// ```
+    /// 其中 STATUS: 0 = 关闭, 1 = 开启
+    ///
+    /// - Parameter mods: 当前 MOD 列表
+    func syncPreferencesData(mods: [ModItem]) throws {
+        guard var content = readPreferencesData() else {
+            print("ℹ️ Preferences Data 不存在，跳过同步")
+            return
+        }
+        
+        var syncedCount = 0
+        
+        for mod in mods {
+            let newStatus = mod.isEnabled ? "1" : "0"
+            let modName = mod.packFileName
+            
+            // 匹配: <value name="MODNAME" type="string">TIMESTAMP|OLDSTATUS</value>
+            let escapedName = NSRegularExpression.escapedPattern(for: modName)
+            let pattern = "(<value name=\"\(escapedName)\" type=\"string\">[^|]*\\|)([01])(</value>)"
+            
+            guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else {
+                print("⚠️ 正则表达式创建失败: \(modName)")
+                continue
+            }
+            
+            let range = NSRange(content.startIndex..<content.endIndex, in: content)
+            let matches = regex.matches(in: content, options: [], range: range)
+            
+            if !matches.isEmpty {
+                content = regex.stringByReplacingMatches(
+                    in: content,
+                    options: [],
+                    range: range,
+                    withTemplate: "$1\(newStatus)$3"
+                )
+                syncedCount += 1
+                print("🔄 同步 Preferences Data: \(modName) → \(mod.isEnabled ? "开启" : "关闭")")
+            }
+        }
+        
+        if syncedCount > 0 {
+            try content.write(toFile: preferencesDataPath, atomically: true, encoding: .utf8)
+            print("✅ 已同步 \(syncedCount) 个 MOD 到 Preferences Data")
+        } else {
+            print("ℹ️ Preferences Data 中未找到匹配的 MOD，跳过写入")
+        }
     }
     
     // MARK: - 图片查找
