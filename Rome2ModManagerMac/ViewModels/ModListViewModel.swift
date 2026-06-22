@@ -164,14 +164,44 @@ final class ModListViewModel: ObservableObject {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
             
-            let foundMods = self.fileManager.scanWorkshopMods()
+            var foundMods = self.fileManager.scanWorkshopMods()
+            let scriptMods = self.fileManager.parseUserScript()
+            
+            // 根据 user.script.txt 设置启用状态和排序权重
+            for i in 0..<foundMods.count {
+                if let scriptIndex = scriptMods.firstIndex(of: foundMods[i].packFileName) {
+                    foundMods[i].isEnabled = true
+                    foundMods[i].loadOrder = scriptIndex  // 临时用作排序权重
+                } else {
+                    foundMods[i].isEnabled = false
+                    foundMods[i].loadOrder = scriptMods.count + i  // 脚本中没有的排在后面
+                }
+            }
+            
+            // 排序：脚本中启用的在前（按脚本顺序），未启用的在后（按文件名）
+            foundMods.sort { a, b in
+                if a.isEnabled != b.isEnabled {
+                    return a.isEnabled  // 启用的在前
+                }
+                if a.isEnabled {
+                    return a.loadOrder < b.loadOrder
+                }
+                return a.packFileName.localizedStandardCompare(b.packFileName) == .orderedAscending
+            }
+            
+            // 更新最终 loadOrder
+            for (index, _) in foundMods.enumerated() {
+                foundMods[index].loadOrder = index
+            }
+            
+            let finalMods = foundMods
             
             DispatchQueue.main.async {
-                self.mods = foundMods
+                self.mods = finalMods
                 self.isScanning = false
                 
                 // 扫描完成后自动选中第一个 MOD（让右侧面板立即有内容，窗口形态正常）
-                if let firstMod = foundMods.first {
+                if let firstMod = finalMods.first {
                     self.selectedModId = firstMod.id
                     self.selectedModImages = self.fileManager.findImagesInModFolder(relativePath: firstMod.workshopSubfolder)
                 } else {
@@ -179,7 +209,7 @@ final class ModListViewModel: ObservableObject {
                     self.selectedModImages = []
                 }
                 
-                if foundMods.isEmpty {
+                if finalMods.isEmpty {
                     if !self.workshopExists {
                         let msg = "Workshop 目录不存在：\(self.fileManager.getWorkshopPath())"
                         self.errorMessage = msg
@@ -190,7 +220,7 @@ final class ModListViewModel: ObservableObject {
                         self.showToast("未发现 MOD 文件", type: .error)
                     }
                 } else {
-                    self.showToast("已扫描到 \(foundMods.count) 个 MOD", type: .success)
+                    self.showToast("已扫描到 \(finalMods.count) 个 MOD", type: .success)
                 }
             }
         }

@@ -209,6 +209,34 @@ class ModFileManager {
         }
     }
     
+    /// 解析 user.script.txt，提取所有 mod 行中的文件名（保持脚本中的顺序）
+    /// - Returns: 按脚本顺序排列的 pack 文件名列表
+    func parseUserScript() -> [String] {
+        guard let content = readUserScript() else { return [] }
+        
+        var mods: [String] = []
+        let lines = content.components(separatedBy: .newlines)
+        
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            // 匹配 mod "filename.pack"; 格式
+            guard trimmed.hasPrefix("mod "), trimmed.hasSuffix(";") else { continue }
+            
+            let inner = trimmed
+                .replacingOccurrences(of: "mod ", with: "")
+                .replacingOccurrences(of: ";", with: "")
+                .trimmingCharacters(in: .whitespaces)
+                .replacingOccurrences(of: "\"", with: "")
+            
+            if !inner.isEmpty {
+                mods.append(inner)
+            }
+        }
+        
+        print("📋 从 user.script.txt 解析到 \(mods.count) 个 MOD")
+        return mods
+    }
+    
     /// 将 MOD 列表写入 user.script.txt
     /// - Parameter mods: 要写入的 MOD 列表（仅写入启用的 MOD，按当前列表顺序）
     /// - Parameter existingContent: 现有文件内容中需要保留的非 MOD 行
