@@ -1,0 +1,25 @@
+# Xcode
+*.xcuserstate
+*.xcuserdata
+*.xcbkptlist
+DerivedData/
+build/
+*.xcworkspace/xcuserdata/
+*.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
+
+# Swift Package Manager
+.swiftpm/
+Package.resolved
+
+# CocoaPods
+Pods/
+
+# macOS
+.DS_Store
+*.swp
+*~
+
+# Build artifacts
+*.app
+*.dSYM.zip
+*.dSYM
