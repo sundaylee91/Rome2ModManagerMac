@@ -150,7 +150,7 @@ struct ContentView: View {
                    let selectedMod = viewModel.mods.first(where: { $0.id == selectedId }) {
                     ModDetailView(
                         mod: selectedMod,
-                        imageUrls: viewModel.selectedModImages
+                        imageUrls: selectedModImages
                     )
                     .environmentObject(loc)
                     .frame(minWidth: 200, idealWidth: 320)
