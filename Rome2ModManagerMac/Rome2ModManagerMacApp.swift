@@ -10,23 +10,28 @@ import SwiftUI
 @main
 struct Rome2ModManagerMacApp: App {
     @StateObject private var viewModel = ModListViewModel()
+    @StateObject private var locManager = LocalizationManager.shared
     
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environmentObject(viewModel)
+                .environmentObject(locManager)
                 .frame(minWidth: 700, minHeight: 450)
         }
         .defaultSize(width: 950, height: 580)
         .windowResizability(.contentMinSize)
         .commands {
+            // 移除 "New Window" 菜单项
+            CommandGroup(replacing: .newItem) {}
+            
             CommandGroup(after: .newItem) {
-                Button("扫描 Workshop MOD") {
+                Button(locManager.str(.scanMods)) {
                     viewModel.scanMods()
                 }
                 .keyboardShortcut("R", modifiers: [.command])
                 
-                Button("写入 user.script.txt") {
+                Button(locManager.str(.writeScript)) {
                     viewModel.writeUserScript()
                 }
                 .keyboardShortcut("S", modifiers: [.command])
