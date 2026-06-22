@@ -1,4 +1,5 @@
 import Foundation
+import Combine
 import SwiftUI
 
 /// 应用本地化管理器，支持中英双语
@@ -165,7 +166,7 @@ enum L10n {
         case .disabledAll: return "已全部关闭"
         case .scriptWritten(let n): return "已写入 \(n) 个启用 MOD 到 user.script.txt"
         case .scriptWriteFailed(let e): return "写入失败: \(e)"
-        case .renameOk(let o, let n): return "已重命名为「\(n)」"
+        case .renameOk(_, let n): return "已重命名为「\(n)」"
         case .renameFail(let e): return "重命名失败: \(e)"
         case .renameAllOk(let n): return "已规范化 \(n) 个 MOD 名称"
         case .renameCancelled: return "已取消"
@@ -281,7 +282,7 @@ enum L10n {
         case .disabledAll: return "All MODs disabled"
         case .scriptWritten(let n): return "Wrote \(n) enabled MODs to user.script.txt"
         case .scriptWriteFailed(let e): return "Write failed: \(e)"
-        case .renameOk(let o, let n): return "Renamed to \"\(n)\""
+        case .renameOk(_, let n): return "Renamed to \"\(n)\""
         case .renameFail(let e): return "Rename failed: \(e)"
         case .renameAllOk(let n): return "Normalized \(n) MOD names"
         case .renameCancelled: return "Cancelled"
