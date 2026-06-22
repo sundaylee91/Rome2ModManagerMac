@@ -3,7 +3,7 @@ import SwiftUI
 /// 重命名 MOD 弹窗
 /// 使用主界面已经预热的缩略图，零等待显示
 struct RenameModView: View {
-    let mod: Mod
+    let mod: ModItem
     let previewImage: NSImage?       // 主界面预热好的缩略图
     let loc: LocalizationManager      // 显式传入，不依赖 @EnvironmentObject
     let onConfirm: (String) -> Void
@@ -47,7 +47,7 @@ struct RenameModView: View {
                 Text(loc.str(.currentNameLabel))
                     .font(.caption)
                     .foregroundColor(.secondary)
-                Text(mod.name)
+                Text(mod.displayName)
                     .font(.caption)
                     .lineLimit(1)
                     .truncationMode(.middle)
@@ -73,7 +73,7 @@ struct RenameModView: View {
         .frame(width: 380)
         .onAppear {
             // 去掉扩展名，方便用户编辑
-            let base = (mod.name as NSString).deletingPathExtension
+            let base = (mod.displayName as NSString).deletingPathExtension
             newName = base
             isTextFieldFocused = true
         }
@@ -88,7 +88,7 @@ struct RenameModView: View {
 
 #Preview {
     RenameModView(
-        mod: Mod(id: UUID(), name: "test_mod.pack", filePath: "/tmp/test_mod.pack", fileSize: 1024),
+        mod: ModItem(packFileName: "test_mod.pack", displayName: "test_mod"),
         previewImage: nil,
         loc: LocalizationManager.shared,
         onConfirm: { _ in },
