@@ -2,6 +2,219 @@
 
 <div align="center">
 
+**A native macOS MOD manager for Total War: ROME II**
+
+[![Platform](https://img.shields.io/badge/platform-macOS%2015.0%2B-blue)](https://github.com/sundaylee91/Rome2ModManagerMac)
+[![Swift](https://img.shields.io/badge/Swift-6.0-orange)](https://swift.org)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Version](https://img.shields.io/badge/version-1.0.0-brightgreen)](https://github.com/sundaylee91/Rome2ModManagerMac)
+
+[English](#english) | [中文](#中文)
+
+</div>
+
+---
+
+<a name="english"></a>
+
+## 📖 Introduction
+
+Rome2 Mod Manager Mac is a native macOS MOD manager purpose-built for **Total War: ROME II**.
+
+Crafted with SwiftUI and seamlessly adapted to macOS design conventions, it lets you manage your Steam Workshop MODs effortlessly: **scan, enable/disable, reorder, rename, and launch the game** — all from one elegant interface.
+
+| Pain Point | Vanilla Solution | This Tool |
+|------------|------------------|------------|
+| Managing MODs requires manual editing of `user.script.txt` | The official launcher's MOD manager is Windows-only | ✅ Visual checkboxes + auto-generate script |
+| MOD filenames are unreadable (e.g. `2532655874`) | Must look up on Workshop page | ✅ Preview thumbnails + custom rename |
+| Load order is hard to control | Manually reorder lines in a text file | ✅ Drag-and-drop reordering, WYSIWYG |
+
+---
+
+## ✨ Features
+
+### Core
+
+- 🔍 **Auto Scan** — Automatically detects Steam Workshop directory and scans all `.pack` MOD files
+- ✅ **One-Click Enable** — Check/uncheck to enable or disable MODs instantly
+- 📝 **Auto-Generate Script** — Automatically writes `user.script.txt` based on your selection — no manual editing
+- 🚀 **Launch Game** — Built-in one-click game launcher, automatically saves script before launching
+- ↔️ **Drag & Drop Sort** — Drag MODs to adjust load order (top loads first)
+- ✏️ **Custom Rename** — Double-click any MOD to rename it; names persist across restarts
+- 🖼️ **Preview Thumbnails** — Auto-scans MOD folders for preview images, visible during rename too
+
+### Advanced
+
+- 🌐 **Bilingual UI** — Supports Chinese / English, or auto-follow system language
+- ⚙️ **Custom Paths** — Customizable Workshop directory, `user.script.txt` path, and Rome2.app path
+- 🩺 **Diagnostics** — Built-in path diagnostics to quickly troubleshoot "MOD not found" or "cannot write script" issues
+- 💾 **Data Persistence** — Enabled list, load order, and custom names are all persisted via UserDefaults — survive restarts
+- 🔔 **Toast Notifications** — Real-time feedback for all operations
+
+---
+
+## 🖥️ System Requirements
+
+| Item | Requirement |
+|------|-------------|
+| **OS** | macOS 15.0 (Sequoia) or later |
+| **Dev Tools** | Xcode 16.0+ (build only) |
+| **Game** | Total War: ROME II — Mac Edition (Steam) |
+
+---
+
+## 🚀 Quick Start
+
+### Direct Download (Recommended)
+
+> Grab the latest `.app` from the [Releases](https://github.com/sundaylee91/Rome2ModManagerMac/releases) page and drag it into `/Applications`.
+
+### Build from Source
+
+```bash
+git clone https://github.com/sundaylee91/Rome2ModManagerMac.git
+cd Rome2ModManagerMac
+open Rome2ModManagerMac.xcodeproj
+```
+
+In Xcode:
+1. Configure your development Team under **Signing & Capabilities**
+2. Press `⌘R` to build and run
+
+---
+
+## ⌨️ Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `⌘R` | Scan Workshop MODs |
+| `⌘S` | Write `user.script.txt` |
+| `⌘Enter` | Launch Game |
+| `↩` | Confirm Rename |
+
+---
+
+## 📂 File Paths
+
+| Purpose | Default Path |
+|---------|--------------|
+| **Workshop MOD Directory** | `~/Library/Application Support/Steam/steamapps/workshop/content/214950/` |
+| **user.script.txt** | `~/Library/Application Support/Feral Interactive/Rome 2/data/user.script.txt` |
+| **Game .app** | Auto-detected (Steam) or `~/Library/Application Support/Steam/steamapps/common/Total War ROME II/` |
+
+> All paths can be customized in the **Settings** panel.
+
+---
+
+## 🏗️ Architecture
+
+```
+Rome2ModManagerMac/
+├── Models/
+│   └── ModItem.swift              # MOD data model
+├── ViewModels/
+│   └── ModListViewModel.swift     # Main ViewModel (MVVM)
+├── Services/
+│   ├── AppSettings.swift          # UserDefaults persistence
+│   └── ModFileManager.swift       # File scanning & script generation
+├── Utils/
+│   ├── LocalizationManager.swift  # Multi-language manager
+│   └── ImageThumbnailCache.swift  # Thumbnail image cache
+├── ContentView.swift              # Main UI (SwiftUI)
+├── AboutView.swift                # About window
+├── AppInfo.swift                  # Version & copyright info
+└── Rome2ModManagerMacApp.swift    # App entry point
+```
+
+| Layer | Technology |
+|-------|------------|
+| **UI** | SwiftUI (native macOS style) |
+| **Architecture** | MVVM (`@ObservableObject` + `@EnvironmentObject`) |
+| **Persistence** | `UserDefaults` (enabled list / order / custom names) |
+| **File I/O** | `FileManager` |
+| **Image Processing** | `AppKit.NSImage` + in-memory cache |
+
+### Data Storage
+
+All user data is persisted via `UserDefaults`:
+
+| Key | Type | Purpose |
+|-----|------|---------|
+| `mod_display_names` | `[String: String]` | Custom MOD names (~10 KB for 100 MODs) |
+| `custom_workshop_path` | `String` | Custom Workshop path |
+| `custom_user_script_path` | `String` | Custom script path |
+| `custom_game_path` | `String` | Custom game .app path |
+
+---
+
+## 🧭 Usage Guide
+
+### Typical Workflow
+
+```
+1. Launch App → Auto-scans Workshop MODs
+2. Check desired MODs → Drag to adjust order
+3. Click a MOD to see its preview thumbnail
+4. Double-click the pencil icon → Rename to something readable
+5. Press ⌘Enter → Auto-writes script & launches game ✅
+```
+
+### Renaming MODs
+
+- **How**: Select a MOD → click the pencil icon (or double-click the row)
+- **Effect**: Only changes the display name in the manager; `.pack` files are untouched
+- **Persistence**: Names survive app restarts, system reboots — permanently saved
+- **Reset**: Settings panel → Reset Defaults → Clear all custom names
+
+### Settings Panel
+
+Click the ⚙️ toolbar icon to open settings:
+
+- **UI Language**: Chinese / English / Auto
+- **Game Path**: Custom Rome2.app location (auto-detects Steam install by default)
+- **Workshop Directory**: Custom MOD scan directory
+- **user.script.txt Path**: Custom script output location
+- **Diagnostics**: Check path statuses for quick troubleshooting
+
+---
+
+## 📄 License
+
+This project is open-sourced under the **MIT License**.
+
+Copyright © 2026 Sunday Lee
+
+---
+
+## 🙏 Acknowledgments
+
+- [Total War: ROME II](https://www.totalwar.com/games/rome-ii/) — Creative Assembly
+- Steam Workshop platform
+- SwiftUI & AppKit community
+
+---
+
+<div align="center">
+
+⭐ If this project helps you, consider giving it a Star!
+
+[🐛 Report Bug](https://github.com/sundaylee91/Rome2ModManagerMac/issues) · [🔧 Contribute](https://github.com/sundaylee91/Rome2ModManagerMac/pulls)
+
+</div>
+
+---
+
+<br>
+<br>
+
+---
+
+<a name="中文"></a>
+
+# 🏛️ Rome2 Mod Manager Mac
+
+<div align="center">
+
 **macOS 版《Total War: ROME II》MOD 管理器**
 
 [![Platform](https://img.shields.io/badge/platform-macOS%2015.0%2B-blue)](https://github.com/sundaylee91/Rome2ModManagerMac)
