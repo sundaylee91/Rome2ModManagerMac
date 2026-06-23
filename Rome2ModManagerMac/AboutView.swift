@@ -28,36 +28,41 @@ struct AboutView: View {
             Divider()
                 .padding(.horizontal, 40)
 
-            Text(AppInfo.isChinese ? "作者：\(AppInfo.author)" : "Author: \(AppInfo.author)")
-                .font(.caption)
-                .foregroundColor(.secondary)
+            // 作者 / 版权 / 项目地址 → 小间距归组
+            VStack(spacing: 6) {
+                Text(AppInfo.isChinese ? "作者：\(AppInfo.author)" : "Author: \(AppInfo.author)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
 
-            Text(AppInfo.copyrightText)
-                .font(.caption2)
-                .foregroundColor(.gray)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 30)
+                // 版权文本：显式多行 + 固定垂直伸展，防止截断
+                Text(AppInfo.copyrightText)
+                    .font(.caption2)
+                    .foregroundColor(.gray)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 30)
 
-            // 项目地址：纯文字，无蓝框，点击打开浏览器
-            let projectURL = "https://github.com/sundaylee91/Rome2ModManagerMac"
-            Text(AppInfo.isChinese
-                    ? "项目地址：\(projectURL)"
-                    : "Project: \(projectURL)")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .padding(.top, 4)
-                .onHover { inside in
-                    if inside {
-                        NSCursor.pointingHand.push()
-                    } else {
-                        NSCursor.pop()
+                // 项目地址：纯文字，无蓝框，点击打开浏览器
+                let projectURL = "https://github.com/sundaylee91/Rome2ModManagerMac"
+                Text(AppInfo.isChinese
+                        ? "项目地址：\(projectURL)"
+                        : "Project: \(projectURL)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .onHover { inside in
+                        if inside {
+                            NSCursor.pointingHand.push()
+                        } else {
+                            NSCursor.pop()
+                        }
                     }
-                }
-                .onTapGesture {
-                    if let url = URL(string: projectURL) {
-                        NSWorkspace.shared.open(url)
+                    .onTapGesture {
+                        if let url = URL(string: projectURL) {
+                            NSWorkspace.shared.open(url)
+                        }
                     }
-                }
+            }
 
             Button("OK") {
                 NSApplication.shared.keyWindow?.close()
