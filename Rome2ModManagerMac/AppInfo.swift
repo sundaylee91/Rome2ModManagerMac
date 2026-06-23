@@ -3,7 +3,7 @@ import Foundation
 struct AppInfo {
     static let appName = "Rome2 Mod Manager Mac"
     static let version = "1.0.0"       // ⭐ 改版本号
-    static let build = "1"             // ⭐ 改 Build 号
+    static let build = "6"             // ⭐ 改 Build 号
 
     // ═══════════════════════════════════════
     // 只需改这里
@@ -11,11 +11,11 @@ struct AppInfo {
     static let authorCN   = "Sunday Lee"
     static let authorEN   = "Sunday Lee"
 
-    static let descriptionCN = "Mac 上的 Total War: Rome II 模组管理器。"
-    static let descriptionEN = "A Total War: Rome II mod manager for Mac."
+    static let descriptionCN = "macOS上的《全面战争:罗马2》专用模组管理器"
+    static let descriptionEN = "A Total War: Rome II mod manager for Macos."
 
-    static let copyrightCN = "2026 MIT License\nhttps://github.com/sundaylee91/Rome2ModManagerMac"
-    static let copyrightEN = "2026 MIT License\nhttps://github.com/sundaylee91/Rome2ModManagerMac"
+    static let copyrightCN = "Copyright © 2026 Sunday Lee\n本软件基于 MIT 开源许可证分发"
+    static let copyrightEN = "Copyright © 2026 Sunday Lee\nDistributed under the MIT License."
     // ═══════════════════════════════════════
 
     // ── 语言检测：跟随软件设置（非系统语言）──
