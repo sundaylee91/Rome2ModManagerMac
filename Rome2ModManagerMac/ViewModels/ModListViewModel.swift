@@ -142,6 +142,18 @@ final class ModListViewModel: ObservableObject {
             guard let self = self else { return }
             
             var foundMods = self.fileManager.scanWorkshopMods()
+            
+            // ✅ 套用用户自定义的显示名称（持久化恢复）
+            let settings = AppSettings.shared
+            for i in 0..<foundMods.count {
+                if let customName = settings.customDisplayName(
+                    forPackFileName: foundMods[i].packFileName,
+                    relativePath: foundMods[i].relativePath
+                ) {
+                    foundMods[i].displayName = customName
+                }
+            }
+            
             let scriptMods = self.fileManager.parseUserScript()
             
             // 根据 user.script.txt 设置启用状态和排序权重
@@ -243,8 +255,16 @@ final class ModListViewModel: ObservableObject {
     func renameMod(_ mod: ModItem, newName: String) {
         guard !newName.trimmingCharacters(in: .whitespaces).isEmpty else { return }
         
+        let trimmed = newName.trimmingCharacters(in: .whitespaces)
+        
         if let index = mods.firstIndex(where: { $0.id == mod.id }) {
-            mods[index].displayName = newName.trimmingCharacters(in: .whitespaces)
+            mods[index].displayName = trimmed
+            // ✅ 持久化自定义名称，下次打开/刷新不再丢失
+            AppSettings.shared.setCustomDisplayName(
+                trimmed,
+                forPackFileName: mod.packFileName,
+                relativePath: mod.relativePath
+            )
             showToast(loc.str(.renameOk(mod.displayName, newName)), type: .success)
         }
     }
