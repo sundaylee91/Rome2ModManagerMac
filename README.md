@@ -2,7 +2,7 @@
 
 <div align="center">
 
-<img width="1062" height="692" alt="截屏2026-06-23 16 57 22" src="https://github.com/user-attachments/assets/3f2da9c4-02e8-4d6b-8d83-742f6b508f0b" />
+<img width="256" height="256" alt="Rome2ModManagerMac-macOS-Default-256x256@1x" src="https://github.com/user-attachments/assets/82a8c130-d842-47bc-ad4a-44ed607b129a" />
 
 **A native macOS MOD manager for Total War: ROME II**
 
@@ -20,6 +20,8 @@
 <a name="english"></a>
 
 ## 📖 Introduction
+
+<img width="1062" height="692" alt="截屏2026-06-23 16 57 22" src="https://github.com/user-attachments/assets/3f2da9c4-02e8-4d6b-8d83-742f6b508f0b" />
 
 Rome2 Mod Manager Mac is a native macOS MOD manager purpose-built for **Total War: ROME II**.
 
