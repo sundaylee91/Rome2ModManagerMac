@@ -2,6 +2,8 @@
 
 <div align="center">
 
+<img width="1062" height="692" alt="截屏2026-06-23 16 57 22" src="https://github.com/user-attachments/assets/3f2da9c4-02e8-4d6b-8d83-742f6b508f0b" />
+
 **A native macOS MOD manager for Total War: ROME II**
 
 [![Platform](https://img.shields.io/badge/platform-macOS%2015.0%2B-blue)](https://github.com/sundaylee91/Rome2ModManagerMac)
