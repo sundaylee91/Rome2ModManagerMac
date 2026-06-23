@@ -2,7 +2,7 @@ import SwiftUI
 
 struct AboutView: View {
     var body: some View {
-        VStack(spacing: 22) {
+        VStack(spacing: 16) {
 
             if let icon = NSImage(named: NSImage.applicationIconName) {
                 Image(nsImage: icon)
@@ -12,16 +12,15 @@ struct AboutView: View {
             }
 
             Text(AppInfo.appName)
-                .font(.title)
-                .fontWeight(.bold)
+                .font(.title2)
+                .fontWeight(.semibold)
 
             Text("Version \(AppInfo.version) (Build \(AppInfo.build))")
-                .font(.subheadline)
-                .foregroundColor(.gray)
+                .font(.caption)
+                .foregroundColor(.secondary)
 
             Text(AppInfo.appDescription)
                 .font(.body)
-                .foregroundColor(.primary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
 
@@ -29,26 +28,21 @@ struct AboutView: View {
                 .padding(.horizontal, 40)
 
             Text(AppInfo.isChinese ? "作者：\(AppInfo.author)" : "Author: \(AppInfo.author)")
-                .font(.caption)
-                .foregroundColor(.secondary)
+                .font(.body)
 
             Text(AppInfo.copyrightText)
                 .font(.caption2)
-                .foregroundColor(.gray)
+                .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 30)
 
-            Text(AppInfo.isChinese
+            Link(AppInfo.isChinese
                     ? "项目地址：https://github.com/sundaylee91/Rome2ModManagerMac"
-                    : "Project: https://github.com/sundaylee91/Rome2ModManagerMac")
+                    : "Project: https://github.com/sundaylee91/Rome2ModManagerMac",
+                 destination: URL(string: "https://github.com/sundaylee91/Rome2ModManagerMac")!)
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .padding(.top, 4)
-                .onTapGesture {
-                    if let url = URL(string: "https://github.com/sundaylee91/Rome2ModManagerMac") {
-                        NSWorkspace.shared.open(url)
-                    }
-                }
                 .onHover { inside in
                     if inside {
                         NSCursor.pointingHand.push()
