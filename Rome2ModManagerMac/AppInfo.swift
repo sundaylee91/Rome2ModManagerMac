@@ -14,8 +14,8 @@ struct AppInfo {
     static let descriptionCN = "Mac 上的 Total War: Rome II 模组管理器。"
     static let descriptionEN = "A Total War: Rome II mod manager for Mac."
 
-    static let copyrightCN = "2026\nhttps://github.com/sundaylee91/Rome2ModManagerMac"
-    static let copyrightEN = "2026\nhttps://github.com/sundaylee91/Rome2ModManagerMac"
+    static let copyrightCN = "2026 MIT License\nhttps://github.com/sundaylee91/Rome2ModManagerMac"
+    static let copyrightEN = "2026 MIT License\nhttps://github.com/sundaylee91/Rome2ModManagerMac"
     // ═══════════════════════════════════════
 
     // ── 语言检测：跟随软件设置（非系统语言）──
