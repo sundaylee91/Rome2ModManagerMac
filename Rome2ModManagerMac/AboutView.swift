@@ -2,7 +2,7 @@ import SwiftUI
 
 struct AboutView: View {
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 22) {
 
             if let icon = NSImage(named: NSImage.applicationIconName) {
                 Image(nsImage: icon)
@@ -12,15 +12,16 @@ struct AboutView: View {
             }
 
             Text(AppInfo.appName)
-                .font(.title2)
-                .fontWeight(.semibold)
+                .font(.title)
+                .fontWeight(.bold)
 
             Text("Version \(AppInfo.version) (Build \(AppInfo.build))")
-                .font(.caption)
-                .foregroundColor(.secondary)
+                .font(.subheadline)
+                .foregroundColor(.gray)
 
             Text(AppInfo.appDescription)
                 .font(.body)
+                .foregroundColor(.primary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
 
@@ -28,18 +29,20 @@ struct AboutView: View {
                 .padding(.horizontal, 40)
 
             Text(AppInfo.isChinese ? "作者：\(AppInfo.author)" : "Author: \(AppInfo.author)")
-                .font(.body)
+                .font(.caption)
+                .foregroundColor(.secondary)
 
             Text(AppInfo.copyrightText)
                 .font(.caption2)
-                .foregroundColor(.secondary)
+                .foregroundColor(.gray)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 30)
 
-            Link(AppInfo.isChinese
-                    ? "项目地址：https://github.com/sundaylee91/Rome2ModManagerMac"
-                    : "Project: https://github.com/sundaylee91/Rome2ModManagerMac",
-                 destination: URL(string: "https://github.com/sundaylee91/Rome2ModManagerMac")!)
+            // 项目地址：纯文字，无蓝框，点击打开浏览器
+            let projectURL = "https://github.com/sundaylee91/Rome2ModManagerMac"
+            Text(AppInfo.isChinese
+                    ? "项目地址：\(projectURL)"
+                    : "Project: \(projectURL)")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .padding(.top, 4)
@@ -48,6 +51,11 @@ struct AboutView: View {
                         NSCursor.pointingHand.push()
                     } else {
                         NSCursor.pop()
+                    }
+                }
+                .onTapGesture {
+                    if let url = URL(string: projectURL) {
+                        NSWorkspace.shared.open(url)
                     }
                 }
 
