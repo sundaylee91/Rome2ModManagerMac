@@ -195,6 +195,8 @@ Copyright © 2026 Sunday Lee
 - [Total War: ROME II](https://www.totalwar.com/games/rome-ii/) — Creative Assembly
 - Steam Workshop platform
 - SwiftUI & AppKit community
+- [DeepSeek V4 Pro](https://www.deepseek.com/) — AI assistance
+- [Google NanoBanana 2](https://ai.google.dev/) — AI assistance
 
 ---
 
@@ -404,6 +406,8 @@ Copyright © 2026 Sunday Lee
 - [Total War: ROME II](https://www.totalwar.com/games/rome-ii/) — Creative Assembly
 - Steam Workshop 平台
 - SwiftUI & AppKit 社区
+- [DeepSeek V4 Pro](https://www.deepseek.com/) — AI 辅助
+- [Google NanoBanana 2](https://ai.google.dev/) — AI 辅助
 
 ---
 
