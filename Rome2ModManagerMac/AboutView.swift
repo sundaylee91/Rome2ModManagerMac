@@ -36,23 +36,20 @@ struct AboutView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 30)
 
-            Link(destination: URL(string: "https://github.com/sundaylee91/Rome2ModManagerMac")!) {
-                HStack(spacing: 6) {
-                    Image(systemName: "github")
-                        .font(.system(size: 14))
-                    Text("Rome2ModManagerMac")
-                        .font(.caption)
-                }
+            Link(AppInfo.isChinese
+                    ? "项目地址：https://github.com/sundaylee91/Rome2ModManagerMac"
+                    : "Project: https://github.com/sundaylee91/Rome2ModManagerMac",
+                 destination: URL(string: "https://github.com/sundaylee91/Rome2ModManagerMac")!)
+                .font(.caption)
                 .foregroundColor(.secondary)
-            }
-            .padding(.top, 4)
-            .onHover { inside in
-                if inside {
-                    NSCursor.pointingHand.push()
-                } else {
-                    NSCursor.pop()
+                .padding(.top, 4)
+                .onHover { inside in
+                    if inside {
+                        NSCursor.pointingHand.push()
+                    } else {
+                        NSCursor.pop()
+                    }
                 }
-            }
 
             Button("OK") {
                 NSApplication.shared.keyWindow?.close()
