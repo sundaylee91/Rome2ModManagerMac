@@ -3,7 +3,7 @@ import Foundation
 struct AppInfo {
     static let appName = "Rome2 Mod Manager Mac"
     static let version = "1.0.0"       // ⭐ 改版本号
-    static let build = "6"             // ⭐ 改 Build 号
+    static let build = "7"             // ⭐ 改 Build 号
 
     // ═══════════════════════════════════════
     // 只需改这里
