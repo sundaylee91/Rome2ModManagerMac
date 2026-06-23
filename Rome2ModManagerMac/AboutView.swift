@@ -46,7 +46,13 @@ struct AboutView: View {
                 .foregroundColor(.secondary)
             }
             .padding(.top, 4)
-            .pointingHandCursor()
+            .onHover { inside in
+                if inside {
+                    NSCursor.pointingHand.push()
+                } else {
+                    NSCursor.pop()
+                }
+            }
 
             Button("OK") {
                 NSApplication.shared.keyWindow?.close()
