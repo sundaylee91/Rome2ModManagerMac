@@ -36,6 +36,12 @@ struct AboutView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 30)
 
+            Link("https://github.com/sundaylee91/Rome2ModManagerMac",
+                 destination: URL(string: "https://github.com/sundaylee91/Rome2ModManagerMac")!)
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .padding(.top, 4)
+
             Button("OK") {
                 NSApplication.shared.keyWindow?.close()
             }
